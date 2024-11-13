@@ -3,17 +3,17 @@
 #include <string.h>
 #include <time.h>
 
-#include "kvs.h"
 #include "constants.h"
+#include "kvs.h"
 
-static struct HashTable* kvs_table = NULL;
+static struct HashTable *kvs_table = NULL;
 
 
 /// Calculates a timespec from a delay in milliseconds.
 /// @param delay_ms Delay in milliseconds.
 /// @return Timespec with the given delay.
 static struct timespec delay_to_timespec(unsigned int delay_ms) {
-  return (struct timespec){delay_ms / 1000, (delay_ms % 1000) * 1000000};
+  return (struct timespec){ delay_ms / 1000, (delay_ms % 1000) * 1000000 };
 }
 
 int kvs_init() {
@@ -59,7 +59,7 @@ int kvs_read(size_t num_pairs, char keys[][MAX_STRING_SIZE]) {
 
   fprintf(stderr, "[");
   for (size_t i = 0; i < num_pairs; i++) {
-    char* result = read_pair(kvs_table, keys[i]);
+    char *result = read_pair(kvs_table, keys[i]);
     if (result == NULL) {
       fprintf(stderr, "(%s,KVSERROR)", keys[i]);
     } else {

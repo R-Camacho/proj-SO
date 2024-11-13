@@ -1,8 +1,8 @@
 #ifndef KVS_PARSER_H
 #define KVS_PARSER_H
 
-#include <stddef.h>
 #include "constants.h"
+#include <stddef.h>
 
 enum Command {
   CMD_WRITE,
@@ -14,7 +14,7 @@ enum Command {
   CMD_HELP,
   CMD_EMPTY,
   CMD_INVALID,
-  EOC  // End of commands
+  EOC // End of commands
 };
 
 /// Reads a line and returns the corresponding command.
@@ -46,4 +46,4 @@ size_t parse_read_delete(int fd, char keys[][MAX_STRING_SIZE], size_t max_keys, 
 /// @return 0 if no thread was specified, 1 if a thread was specified, -1 on error.
 int parse_wait(int fd, unsigned int *delay, unsigned int *thread_id);
 
-#endif  // KVS_PARSER_H
+#endif // KVS_PARSER_H
