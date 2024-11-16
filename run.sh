@@ -14,9 +14,11 @@ trap cleanup INT TERM
 
 # Move to the src directory and execute the commands
 cd src
-make format
+make format ..
 
 # Execute make run
 make
-./kvs
+
+./kvs $1 $2 $3
+
 cd ..

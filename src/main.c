@@ -1,17 +1,72 @@
+#include <dirent.h>
+#include <fcntl.h>
 #include <limits.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 #include <unistd.h>
 
 #include "constants.h"
 #include "operations.h"
 #include "parser.h"
 
-int main() {
-
+int main(int argc, char *argv[]) {
   if (kvs_init()) {
     fprintf(stderr, "Failed to initialize KVS\n");
     return 1;
+  }
+
+  // debug dos args
+  printf("argc: %d\n", argc);
+  for (int i = 0; i < argc; i++)
+    printf("argv[%d]: %s\n", i, argv[i]);
+
+  // TODO isto é desnecessário
+  if (argc < 2) {
+    fprintf(stderr, "Usage: %s <job_directory> [MAX_THREADS]\n", argv[0]);
+    kvs_terminate();
+    return 1;
+  }
+
+  char *jobs_dir = argv[1];
+  printf("jobs_dir: %s\n", jobs_dir);
+
+  DIR *dir = opendir(jobs_dir);
+  if (!dir) {
+    fprintf(stderr, "Failed to open directory %s\n", jobs_dir);
+    kvs_terminate();
+    return 1;
+  }
+
+  struct dirent *entry;
+  while ((entry = readdir(dir))) {
+    // verify .job extension
+    if (strstr(entry->d_name, ".job") != NULL)
+      continue;
+
+    // construct full path for the .job file
+    char job_path[PATH_MAX];
+    snprintf(job_path, sizeof(job_path), "%s/%s", jobs_dir, entry->d_name);
+
+    int job_fd = open(job_path, O_RDONLY);
+    if (job_fd == -1) {
+      fprintf(stderr, "Failed to open job file %s", job_path);
+      // return 1; TODO tirar a duvida se o programa acaba ou simplesmente avançamos para outro ficheiro
+    }
+    printf("Opening file: %s\n", job_path);
+
+
+    char out_name[NAME_MAX];
+    strncpy(out_name, entry->d_name, NAME_MAX);
+    char *dot = strchr(out_name, '.');
+    if (dot != NULL)
+      strcpy(dot, ".out");
+    else
+      strcat(out_name, ".out");
+
+    printf("out_name: %s\n", out_name);
+
+    puts("NOT IMPLEMENTED YET");
   }
 
   while (1) {
