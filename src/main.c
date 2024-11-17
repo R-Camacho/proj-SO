@@ -4,11 +4,19 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <sys/stat.h>
 #include <unistd.h>
 
 #include "constants.h"
 #include "operations.h"
 #include "parser.h"
+
+int is_job_file(const char *file_name) {
+  const char *dot = strrchr(file_name, '.'); // last dot on file_name
+  if (dot != NULL && strcmp(dot, ".job") == 0)
+    return 1;
+  return 0;
+}
 
 int main(int argc, char *argv[]) {
   if (kvs_init()) {
@@ -31,40 +39,57 @@ int main(int argc, char *argv[]) {
   char *jobs_dir = argv[1];
   printf("jobs_dir: %s\n", jobs_dir);
 
+  int MAX_THREADS = atoi(argv[2]);
+  printf("MAX_THREADS: %d\n", MAX_THREADS);
+
   DIR *dir = opendir(jobs_dir);
-  if (!dir) {
+  if (dir == NULL) {
     fprintf(stderr, "Failed to open directory %s\n", jobs_dir);
     kvs_terminate();
     return 1;
   }
 
   struct dirent *entry;
-  while ((entry = readdir(dir))) {
+  while ((entry = readdir(dir)) != NULL) {
     // verify .job extension
-    if (strstr(entry->d_name, ".job") != NULL)
+    if (!is_job_file(entry->d_name))
       continue;
 
+    printf("After: file_path(entry->d_name): %s\n", entry->d_name);
+
     // construct full path for the .job file
-    char job_path[PATH_MAX];
-    snprintf(job_path, sizeof(job_path), "%s/%s", jobs_dir, entry->d_name);
+    // full_path = jobs_dir
+    char full_path[PATH_MAX] = ""; // TODO talvez mudar para uma constante do header file
+    strncpy(full_path, jobs_dir, PATH_MAX);
+    strcat(full_path, "/");
+    strcat(full_path, entry->d_name);
+    printf("full_path: %s\n", full_path);
 
-    int job_fd = open(job_path, O_RDONLY);
-    if (job_fd == -1) {
-      fprintf(stderr, "Failed to open job file %s", job_path);
-      // return 1; TODO tirar a duvida se o programa acaba ou simplesmente avançamos para outro ficheiro
+    int job_fd = open(full_path, O_RDONLY);
+    if (job_fd < 0) {
+      fprintf(stderr, "Failed to open job file %s", full_path);
+      return 1; // TODO tirar a duvida se o programa acaba ou simplesmente avançamos para outro ficheiro
     }
-    printf("Opening file: %s\n", job_path);
+    printf("Opening file: %s\n", full_path);
+
+    // Create correspondent .out file;
+    char out_path[PATH_MAX] = "";
+    printf("strlen(full_path): %ld\n", strlen(full_path));
+    strncpy(out_path, full_path, strlen(full_path) - 4); // remove ".job"
+    strcat(out_path, ".out");
+    printf("out_path: %s\n", out_path);
+
+    // se calhar criar uma macro no constants.h para isto
+    int open_flags = O_CREAT | O_WRONLY | O_TRUNC;
+    // rw-rw-rw
+    mode_t file_perms = S_IRUSR | S_IWUSR | S_IRGRP | S_IWGRP | S_IROTH | S_IWOTH;
 
 
-    char out_name[NAME_MAX];
-    strncpy(out_name, entry->d_name, NAME_MAX);
-    char *dot = strchr(out_name, '.');
-    if (dot != NULL)
-      strcpy(dot, ".out");
-    else
-      strcat(out_name, ".out");
-
-    printf("out_name: %s\n", out_name);
+    int out_fd = open(out_path, open_flags, file_perms);
+    if (out_fd == -1) {
+      fprintf(stderr, "Failed to open .out file\n");
+      return 1;
+    }
 
     puts("NOT IMPLEMENTED YET");
   }
