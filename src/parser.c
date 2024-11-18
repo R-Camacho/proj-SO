@@ -153,11 +153,16 @@ enum Command get_next(int fd) {
 
     return CMD_HELP;
 
-  case '#': cleanup(fd); return CMD_EMPTY;
+  case '#':
+    cleanup(fd);
+    return CMD_EMPTY;
 
-  case '\n': return CMD_EMPTY;
+  case '\n':
+    return CMD_EMPTY;
 
-  default: cleanup(fd); return CMD_INVALID;
+  default:
+    cleanup(fd);
+    return CMD_INVALID;
   }
 }
 
