@@ -75,7 +75,6 @@ int main(int argc, char *argv[]) {
 
     // Create correspondent .out file;
     char out_path[PATH_MAX] = "";
-    printf("strlen(job_path): %ld\n", strlen(job_path));
     strncpy(out_path, job_path, strlen(job_path) - 4); // remove ".job"
     strcat(out_path, ".out");
     printf("out_path: %s\n", out_path);
@@ -94,6 +93,8 @@ int main(int argc, char *argv[]) {
 
     puts("NOT IMPLEMENTED YET");
 
+    char *buffer = (char *)malloc(MAX_WRITE_SIZE * sizeof(char)); // TODO verificar esta constante MAX_WRITE_SIZE
+
     while (1) {
       char keys[MAX_WRITE_SIZE][MAX_STRING_SIZE]   = { 0 };
       char values[MAX_WRITE_SIZE][MAX_STRING_SIZE] = { 0 };
@@ -101,12 +102,15 @@ int main(int argc, char *argv[]) {
       size_t num_pairs;
       int exit = 0;
 
-      printf("> ");
-      fflush(stdout);
+      memset(buffer, 0, sizeof(*buffer));
+      *buffer = '\0';
 
-      switch (get_next(STDIN_FILENO)) {
+      printf("> "); // TODO se calhar tirar isto
+      // fflush(stdout); // e isto também
+
+      switch (get_next(job_fd)) {
       case CMD_WRITE:
-        num_pairs = parse_write(STDIN_FILENO, keys, values, MAX_WRITE_SIZE, MAX_STRING_SIZE);
+        num_pairs = parse_write(job_fd, keys, values, MAX_WRITE_SIZE, MAX_STRING_SIZE);
         if (num_pairs == 0) {
           fprintf(stderr, "Invalid command. See HELP for usage\n");
           continue;
@@ -119,7 +123,7 @@ int main(int argc, char *argv[]) {
         break;
 
       case CMD_READ:
-        num_pairs = parse_read_delete(STDIN_FILENO, keys, MAX_WRITE_SIZE, MAX_STRING_SIZE);
+        num_pairs = parse_read_delete(job_fd, keys, MAX_WRITE_SIZE, MAX_STRING_SIZE);
 
         if (num_pairs == 0) {
           fprintf(stderr, "Invalid command. See HELP for usage\n");
@@ -132,7 +136,7 @@ int main(int argc, char *argv[]) {
         break;
 
       case CMD_DELETE:
-        num_pairs = parse_read_delete(STDIN_FILENO, keys, MAX_WRITE_SIZE, MAX_STRING_SIZE);
+        num_pairs = parse_read_delete(job_fd, keys, MAX_WRITE_SIZE, MAX_STRING_SIZE);
 
         if (num_pairs == 0) {
           fprintf(stderr, "Invalid command. See HELP for usage\n");
@@ -145,11 +149,19 @@ int main(int argc, char *argv[]) {
         break;
 
       case CMD_SHOW:
-        kvs_show();
+        kvs_show(buffer);
+
+        if (write(out_fd, buffer, strlen(buffer)) != (ssize_t)strlen(buffer)) {
+          fprintf(stderr, "Failed to write to .out file: %s\n", out_path);
+          kvs_terminate(); // TODO ver se é preciso terminar ou basta dar return/continue
+          return 1;
+        }
+
+
         break;
 
       case CMD_WAIT:
-        if (parse_wait(STDIN_FILENO, &delay, NULL) == -1) {
+        if (parse_wait(job_fd, &delay, NULL) == -1) {
           fprintf(stderr, "Invalid command. See HELP for usage\n");
           continue;
         }
@@ -204,6 +216,7 @@ int main(int argc, char *argv[]) {
       kvs_terminate();
     }
   }
+  free(dir);
 
   return kvs_terminate();
 }

@@ -94,11 +94,16 @@ int kvs_delete(size_t num_pairs, char keys[][MAX_STRING_SIZE]) {
   return 0;
 }
 
-void kvs_show() {
+void kvs_show(char *buffer) {
   for (int i = 0; i < TABLE_SIZE; i++) {
     KeyNode *keyNode = kvs_table->table[i];
     while (keyNode != NULL) {
       printf("(%s, %s)\n", keyNode->key, keyNode->value);
+      strcat(buffer, "(");
+      strcat(buffer, keyNode->key);
+      strcat(buffer, ",");
+      strcat(buffer, keyNode->value);
+      strcat(buffer, ")\n");   // TODO ver melhor maneira de fazer isto
       keyNode = keyNode->next; // Move to the next node
     }
   }
