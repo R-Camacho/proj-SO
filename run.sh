@@ -19,6 +19,9 @@ make format ..
 # Execute make run
 make
 
-./kvs $1 $2 $3
+valgrind --leak-check=full -s ./kvs $1 $2 $3
+# ou sem valgrind
+# ./kvs $1 $2 $3
+
 
 cd ..
