@@ -1,8 +1,10 @@
 #include "reader.h"
 
+extern sem_t sem;
 
 void read_file(int in_fd, int out_fd, const char *job_path) {
   size_t backup = 0;
+
   while (1) {
     char keys[MAX_WRITE_SIZE][MAX_STRING_SIZE]   = { 0 };
     char values[MAX_WRITE_SIZE][MAX_STRING_SIZE] = { 0 };
@@ -73,34 +75,32 @@ void read_file(int in_fd, int out_fd, const char *job_path) {
       break;
 
     case CMD_BACKUP:
+      backup++;
 
-      // TODO ver o limite máximo de backups simultâneos
-      if (backup >= MAX_BACKUPS) {
-        fprintf(stderr, "Maximum number of backups reached\n");
-        continue;
-      }
-
+      sem_wait(&sem);
       int pid = fork();
-      if (pid < 0) {
+      if (pid < 0) { // error handling
         fprintf(stderr, "Failed to fork\n");
-        continue;
-        // TODO tratar deste erro melhor
-      } else if (pid == 0) { // child
-        backup++;
+        sem_post(&sem); // liberta o semáforo
+        return;
+
+      } else if (pid == 0) { // child process
+
         printf("Backup %lu started\n", backup); // TODO remover
         if (kvs_backup(job_path, backup)) {
           fprintf(stderr, "Failed to perform backup.\n");
           exit(1);
         }
-        kvs_terminate(); // TODO ver se é preciso terminar nos filhos
-        // TODO ver se é preciso free dir nos filhos
-        // e se calhar criar uma funcao para dar free em tudo
-
+        kvs_terminate(); // TODO ver se é preciso terminar nos filhos, ver se é preciso free dir nos filhos e se calhar criar uma funcao para dar free em tudo
+        sem_post(&sem);  // liberta o semáforo
         printf("Backup %lu done\n", backup); // TODO remover
-
         exit(0);
-      } else {                    // parent
+
+      } else {                    // parent process
         printf("next command\n"); // TODO remover
+
+        wait(NULL);
+        sem_post(&sem); // liberta o semáfor
       }
       printf("next command outside\n"); // TODO remover
       break;

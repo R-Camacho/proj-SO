@@ -8,3 +8,5 @@ HELP
 BACKUP
 WRITE [(f,filipe)(n,no)]
 BACKUP
+WRITE [(j,jose)]
+BACKUP

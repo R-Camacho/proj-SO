@@ -1,6 +1,7 @@
 #include <dirent.h>
 #include <fcntl.h>
 #include <limits.h>
+#include <semaphore.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -12,8 +13,11 @@
 #include "parser.h"
 #include "reader.h"
 
-size_t MAX_BACKUPS;
+// maybe fazer main.h ?
+
+unsigned int MAX_BACKUPS;
 size_t MAX_THREADS;
+sem_t sem; // TODO ver onde meter isto;
 
 int is_job_file(const char *file_name) {
   const char *dot = strrchr(file_name, '.'); // last dot on file_name
@@ -38,8 +42,9 @@ int main(int argc, char *argv[]) {
   char *jobs_dir = argv[1];
   printf("jobs_dir: %s\n", jobs_dir);
 
-  MAX_BACKUPS = strtoul(argv[2], NULL, 10);
-  printf("MAX_BACKUPS: %lu\n", MAX_BACKUPS);
+  unsigned long temp_max_backups = strtoul(argv[2], NULL, 10);
+  MAX_BACKUPS                    = (unsigned int)temp_max_backups;
+  printf("MAX_BACKUPS: %u\n", MAX_BACKUPS);
 
   MAX_THREADS = strtoul(argv[3], NULL, 10);
   printf("MAX_THREADS: %lu\n", MAX_THREADS);
@@ -89,6 +94,12 @@ int main(int argc, char *argv[]) {
       return 1;
     }
 
+    // inicializar semáforo
+    if (sem_init(&sem, 0, MAX_BACKUPS) != 0) {
+      fprintf(stderr, "Failed to initialize semaphore\n");
+      return -1;
+    }
+
     read_file(job_fd, out_fd, job_path);
 
     // TODO fechar os ficheiros aqui
@@ -102,6 +113,8 @@ int main(int argc, char *argv[]) {
       kvs_terminate();
     }
   }
+  // destroi o semáforo
+  sem_destroy(&sem);
   // free(dir);
   closedir(dir);
 
