@@ -98,8 +98,8 @@ int main(int argc, char *argv[]) {
       memset(buffer, 0, sizeof(*buffer));
       *buffer = '\0';
 
-      printf("> "); // TODO se calhar tirar isto
-      // fflush(stdout); // e isto também
+      // printf("> "); // TODO se calhar tirar isto
+      //  fflush(stdout); // e isto também
 
       switch (get_next(job_fd)) {
       case CMD_WRITE:
@@ -123,7 +123,7 @@ int main(int argc, char *argv[]) {
           continue;
         }
 
-        if (kvs_read(num_pairs, keys)) {
+        if (kvs_read(num_pairs, keys, out_fd)) {
           fprintf(stderr, "Failed to read pair\n");
         }
         break;

@@ -1,5 +1,6 @@
 WRITE [(a,anna)(b,bernardo)]
 WRITE [(d,dinis)(c,carlota)]
 SHOW
-DELETE [a,d]
+DELETE [a,naoexiste]
 SHOW
+READ [naoexiste,b,a]
