@@ -1,7 +1,9 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <sys/types.h> // TODO ver os includes depois
 #include <time.h>
+#include <unistd.h>
 
 #include "constants.h"
 #include "kvs.h"
@@ -71,42 +73,68 @@ int kvs_read(size_t num_pairs, char keys[][MAX_STRING_SIZE]) {
   return 0;
 }
 
-int kvs_delete(size_t num_pairs, char keys[][MAX_STRING_SIZE]) {
+int kvs_delete(size_t num_pairs, char keys[][MAX_STRING_SIZE], int fd) {
   if (kvs_table == NULL) {
     fprintf(stderr, "KVS state must be initialized\n");
     return 1;
   }
   int aux = 0;
 
+  char temp[MAX_WRITE_SIZE];                                    // TODO verificar constante
+  char *buffer = (char *)malloc(MAX_WRITE_SIZE * sizeof(char)); // TODO verificar constante
+  memset(buffer, 0, sizeof(*buffer));
+  *buffer = '\0';
+
   for (size_t i = 0; i < num_pairs; i++) {
     if (delete_pair(kvs_table, keys[i]) != 0) {
       if (!aux) {
-        printf("[");
+        printf("["); // TODO tirar todos os printf's
+        strcat(buffer, "[");
         aux = 1;
       }
       printf("(%s,KVSMISSING)", keys[i]);
+      snprintf(temp, MAX_WRITE_SIZE, "(%s,KVSMISSING)", keys[i]); // TODO verificar constante
+      strncat(buffer, temp, strlen(temp));
     }
   }
   if (aux) {
     printf("]\n");
+    strcat(buffer, "]");
   }
+  if (write(fd, buffer, strlen(buffer)) != (ssize_t)(strlen(buffer))) {
+    fprintf(stderr, "Failed to write to .out file: \n");
+    kvs_terminate(); // TODO ver se é preciso terminar ou basta dar return/continue/exit
+    return 1;
+    //  TODO exit(1);
+  }
+  free(buffer);
 
   return 0;
 }
 
-void kvs_show(char *buffer) {
+void kvs_show(int fd) {
+  char temp[MAX_WRITE_SIZE];                                    // TODO verificar constante
+  char *buffer = (char *)malloc(MAX_WRITE_SIZE * sizeof(char)); // TODO verificar constante
+  memset(buffer, 0, sizeof(*buffer));
+  *buffer = '\0';
+
   for (int i = 0; i < TABLE_SIZE; i++) {
     KeyNode *keyNode = kvs_table->table[i];
     while (keyNode != NULL) {
-      printf("(%s, %s)\n", keyNode->key, keyNode->value);
-      strcat(buffer, "(");
-      strcat(buffer, keyNode->key);
-      strcat(buffer, ",");
-      strcat(buffer, keyNode->value);
-      strcat(buffer, ")\n");   // TODO ver melhor maneira de fazer isto
+      printf("(%s, %s)\n", keyNode->key, keyNode->value);                         // TODO tirar isto
+      snprintf(temp, MAX_WRITE_SIZE, "(%s, %s)\n", keyNode->key, keyNode->value); // TODO verificar constante
+      strncat(buffer, temp, strlen(temp));
+
       keyNode = keyNode->next; // Move to the next node
     }
   }
+  if (write(fd, buffer, strlen(buffer)) != (ssize_t)(strlen(buffer))) {
+    fprintf(stderr, "Failed to write to .out file: \n");
+    kvs_terminate(); // TODO ver se é preciso terminar ou basta dar return/continue/exit
+    // return 1;
+    //  TODO exit(1);
+  }
+  free(buffer);
 }
 
 int kvs_backup() {

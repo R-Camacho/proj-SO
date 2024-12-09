@@ -24,11 +24,6 @@ int main(int argc, char *argv[]) {
     return 1;
   }
 
-  // debug dos args
-  printf("argc: %d\n", argc);
-  for (int i = 0; i < argc; i++)
-    printf("argv[%d]: %s\n", i, argv[i]);
-
   // TODO isto é desnecessário
   if (argc < 3) {                                                          // menor que 3 ou 2?
     fprintf(stderr, "Usage: %s <job_directory> [MAX_THREADS]\n", argv[0]); // ajustar estes parenteses
@@ -91,8 +86,6 @@ int main(int argc, char *argv[]) {
       return 1;
     }
 
-    puts("NOT IMPLEMENTED YET");
-
     char *buffer = (char *)malloc(MAX_WRITE_SIZE * sizeof(char)); // TODO verificar esta constante MAX_WRITE_SIZE
 
     while (1) {
@@ -143,21 +136,13 @@ int main(int argc, char *argv[]) {
           continue;
         }
 
-        if (kvs_delete(num_pairs, keys)) {
+        if (kvs_delete(num_pairs, keys, out_fd)) {
           fprintf(stderr, "Failed to delete pair\n");
         }
         break;
 
       case CMD_SHOW:
-        kvs_show(buffer);
-
-        if (write(out_fd, buffer, strlen(buffer)) != (ssize_t)strlen(buffer)) {
-          fprintf(stderr, "Failed to write to .out file: %s\n", out_path);
-          kvs_terminate(); // TODO ver se é preciso terminar ou basta dar return/continue
-          return 1;
-        }
-
-
+        kvs_show(out_fd);
         break;
 
       case CMD_WAIT:

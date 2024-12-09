@@ -28,12 +28,13 @@ int kvs_read(size_t num_pairs, char keys[][MAX_STRING_SIZE]);
 /// Deletes key value pairs from the KVS.
 /// @param num_pairs Number of pairs to read.
 /// @param keys Array of keys' strings.
+/// @param fd File descriptor to write the output.
 /// @return 0 if the pairs were deleted successfully, 1 otherwise.
-int kvs_delete(size_t num_pairs, char keys[][MAX_STRING_SIZE]);
+int kvs_delete(size_t num_pairs, char keys[][MAX_STRING_SIZE], int fd);
 
 /// Writes the state of the KVS.
 /// @param fd File descriptor to write the output.
-void kvs_show();
+void kvs_show(int fd);
 
 /// Creates a backup of the KVS state and stores it in the correspondent
 /// backup file
