@@ -8,7 +8,6 @@ void read_file(int in_fd, int out_fd, const char *job_path) {
     char values[MAX_WRITE_SIZE][MAX_STRING_SIZE] = { 0 };
     unsigned int delay;
     size_t num_pairs;
-    int should_exit = 0;
 
     // printf("> "); // TODO se calhar tirar isto
     //  fflush(stdout); // e isto também
@@ -119,10 +118,7 @@ void read_file(int in_fd, int out_fd, const char *job_path) {
       break;
 
     case EOC:
-      should_exit = 1;
-      break;
+      return;
     }
-    if (should_exit)
-      break;
   }
 }
