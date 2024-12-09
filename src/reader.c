@@ -63,24 +63,31 @@ void read_file(int in_fd, int out_fd, const char *job_path) {
       }
 
       if (delay > 0) {
-        printf("Waiting...\n");
+        const char wait_message[] = "Waiting...\n";
+        if (write(out_fd, wait_message, strlen(wait_message)) != (ssize_t)strlen(wait_message)) {
+          fprintf(stderr, "Failed to write help to .out file\n");
+          // TODO ver o que fazer
+        }
         kvs_wait(delay);
       }
       break;
 
     case CMD_BACKUP:
+
+      // TODO ver o limite máximo de backups simultâneos
       if (backup >= MAX_BACKUPS) {
         fprintf(stderr, "Maximum number of backups reached\n");
         continue;
       }
-      backup++;
 
       int pid = fork();
       if (pid < 0) {
         fprintf(stderr, "Failed to fork\n");
-        continue; // TODO tratar deste erro melhor
-      }
-      if (pid == 0) { // child
+        continue;
+        // TODO tratar deste erro melhor
+      } else if (pid == 0) { // child
+        backup++;
+        printf("Backup %lu started\n", backup); // TODO remover
         if (kvs_backup(job_path, backup)) {
           fprintf(stderr, "Failed to perform backup.\n");
           exit(1);
@@ -95,7 +102,7 @@ void read_file(int in_fd, int out_fd, const char *job_path) {
       } else {                    // parent
         printf("next command\n"); // TODO remover
       }
-
+      printf("next command outside\n"); // TODO remover
       break;
 
     case CMD_INVALID:
@@ -103,14 +110,18 @@ void read_file(int in_fd, int out_fd, const char *job_path) {
       break;
 
     case CMD_HELP:
-      printf("Available commands:\n"
-             "  WRITE [(key,value)(key2,value2),...]\n"
-             "  READ [key,key2,...]\n"
-             "  DELETE [key,key2,...]\n"
-             "  SHOW\n"
-             "  WAIT <delay_ms>\n"
-             "  BACKUP\n" // Not implemented
-             "  HELP\n");
+      const char help[] = "Available commands:\n"
+                          "  WRITE [(key,value)(key2,value2),...]\n"
+                          "  READ [key,key2,...]\n"
+                          "  DELETE [key,key2,...]\n"
+                          "  SHOW\n"
+                          "  WAIT <delay_ms>\n"
+                          "  BACKUP\n" // Not implemented
+                          "  HELP\n";
+      if (write(out_fd, help, strlen(help)) != (ssize_t)strlen(help)) {
+        fprintf(stderr, "Failed to write help to .out file\n");
+        // TODO ver o que fazer
+      }
 
       break;
 
