@@ -1,8 +1,6 @@
 #include "reader.h"
 
-// TODO ideia usar dprintf(fd, "string");
-
-int read_batch(int in_fd, int out_fd) {
+void read_file(int in_fd, int out_fd) {
   while (1) {
     char keys[MAX_WRITE_SIZE][MAX_STRING_SIZE]   = { 0 };
     char values[MAX_WRITE_SIZE][MAX_STRING_SIZE] = { 0 };
@@ -10,8 +8,8 @@ int read_batch(int in_fd, int out_fd) {
     size_t num_pairs;
     int exit = 0;
 
-    printf("> ");
-    fflush(stdout);
+    // printf("> "); // TODO se calhar tirar isto
+    //  fflush(stdout); // e isto também
 
     switch (get_next(in_fd)) {
     case CMD_WRITE:
@@ -35,7 +33,7 @@ int read_batch(int in_fd, int out_fd) {
         continue;
       }
 
-      if (kvs_read(num_pairs, keys)) {
+      if (kvs_read(num_pairs, keys, out_fd)) {
         fprintf(stderr, "Failed to read pair\n");
       }
       break;
@@ -48,13 +46,13 @@ int read_batch(int in_fd, int out_fd) {
         continue;
       }
 
-      if (kvs_delete(num_pairs, keys)) {
+      if (kvs_delete(num_pairs, keys, out_fd)) {
         fprintf(stderr, "Failed to delete pair\n");
       }
       break;
 
     case CMD_SHOW:
-      kvs_show();
+      kvs_show(out_fd);
       break;
 
     case CMD_WAIT:
@@ -82,7 +80,7 @@ int read_batch(int in_fd, int out_fd) {
 
     case CMD_HELP:
       printf("Available commands:\n"
-             "  WRITE [(key,value),(key2,value2),...]\n"
+             "  WRITE [(key,value)(key2,value2),...]\n"
              "  READ [key,key2,...]\n"
              "  DELETE [key,key2,...]\n"
              "  SHOW\n"
@@ -96,7 +94,10 @@ int read_batch(int in_fd, int out_fd) {
       break;
 
     case EOC:
-      return 1;
+      exit = 1;
+      break;
     }
+    if (exit)
+      break;
   }
 }
