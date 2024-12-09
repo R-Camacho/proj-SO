@@ -142,7 +142,30 @@ void kvs_show(int fd) {
 }
 
 // TODO
-int kvs_backup() {
+int kvs_backup(const char *job_path, size_t backup) {
+  // TODO se calhar criar uma macro no constants.h para estas duas
+  int open_flags = O_CREAT | O_WRONLY | O_TRUNC;
+  // rw-rw-rw (or 0666)
+  mode_t file_perms = S_IRUSR | S_IWUSR | S_IRGRP | S_IWGRP | S_IROTH | S_IWOTH;
+
+  // Create correspondent .bck file <nome-ficheiro>-<num-backup>.bck
+  char bck_path[PATH_MAX] = "";
+  strncpy(bck_path, job_path, strlen(job_path) - 4); // remove ".job"
+  // bck_path += "-<num-backup>.bck"
+  snprintf(bck_path + strlen(bck_path), PATH_MAX - strlen(bck_path), "-%lu.bck", backup);
+
+  int bck_fd = open(bck_path, open_flags, file_perms);
+  if (bck_fd < 0) {
+    fprintf(stderr, "Failed to open .bck file\n");
+    return 1;
+  }
+
+  kvs_show(bck_fd);
+
+  if (close(bck_fd) < 0) {
+    fprintf(stderr, "Failed to close .out file\n");
+    kvs_terminate();
+  }
   return 0;
 }
 

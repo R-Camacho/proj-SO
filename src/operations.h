@@ -1,10 +1,13 @@
 #ifndef KVS_OPERATIONS_H
 #define KVS_OPERATIONS_H
 
+#include <fcntl.h>
+#include <limits.h>
 #include <stddef.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <sys/stat.h>
 #include <sys/types.h> // TODO ver os includes depois
 #include <time.h>
 #include <unistd.h>
@@ -47,8 +50,10 @@ void kvs_show(int fd);
 
 /// Creates a backup of the KVS state and stores it in the correspondent
 /// backup file
+/// @param job_path Path to the job file.
+/// @param backup Number of the backup.
 /// @return 0 if the backup was successful, 1 otherwise.
-int kvs_backup();
+int kvs_backup(const char *job_path, size_t backup);
 
 /// Waits for the last backup to be called.
 void kvs_wait_backup();

@@ -4,3 +4,6 @@ SHOW
 DELETE [a,naoexiste]
 SHOW
 READ [naoexiste,b,a]
+BACKUP
+WRITE [(f,filipe)(n,no)]
+BACKUP

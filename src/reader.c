@@ -1,12 +1,14 @@
 #include "reader.h"
 
-void read_file(int in_fd, int out_fd) {
+
+void read_file(int in_fd, int out_fd, const char *job_path) {
+  size_t backup = 0;
   while (1) {
     char keys[MAX_WRITE_SIZE][MAX_STRING_SIZE]   = { 0 };
     char values[MAX_WRITE_SIZE][MAX_STRING_SIZE] = { 0 };
     unsigned int delay;
     size_t num_pairs;
-    int exit = 0;
+    int should_exit = 0;
 
     // printf("> "); // TODO se calhar tirar isto
     //  fflush(stdout); // e isto também
@@ -68,10 +70,33 @@ void read_file(int in_fd, int out_fd) {
       break;
 
     case CMD_BACKUP:
-
-      if (kvs_backup()) {
-        fprintf(stderr, "Failed to perform backup.\n");
+      if (backup >= MAX_BACKUPS) {
+        fprintf(stderr, "Maximum number of backups reached\n");
+        continue;
       }
+      backup++;
+
+      int pid = fork();
+      if (pid < 0) {
+        fprintf(stderr, "Failed to fork\n");
+        continue; // TODO tratar deste erro melhor
+      }
+      if (pid == 0) { // child
+        if (kvs_backup(job_path, backup)) {
+          fprintf(stderr, "Failed to perform backup.\n");
+          exit(1);
+        }
+        kvs_terminate(); // TODO ver se é preciso terminar nos filhos
+        // TODO ver se é preciso free dir nos filhos
+        // e se calhar criar uma funcao para dar free em tudo
+
+        printf("Backup %lu done\n", backup); // TODO remover
+
+        exit(0);
+      } else {                    // parent
+        printf("next command\n"); // TODO remover
+      }
+
       break;
 
     case CMD_INVALID:
@@ -94,10 +119,10 @@ void read_file(int in_fd, int out_fd) {
       break;
 
     case EOC:
-      exit = 1;
+      should_exit = 1;
       break;
     }
-    if (exit)
+    if (should_exit)
       break;
   }
 }

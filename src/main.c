@@ -12,6 +12,9 @@
 #include "parser.h"
 #include "reader.h"
 
+size_t MAX_BACKUPS;
+size_t MAX_THREADS;
+
 int is_job_file(const char *file_name) {
   const char *dot = strrchr(file_name, '.'); // last dot on file_name
   if (dot != NULL && strcmp(dot, ".job") == 0)
@@ -35,8 +38,11 @@ int main(int argc, char *argv[]) {
   char *jobs_dir = argv[1];
   printf("jobs_dir: %s\n", jobs_dir);
 
-  int MAX_THREADS = atoi(argv[2]);
-  printf("MAX_THREADS: %d\n", MAX_THREADS);
+  MAX_BACKUPS = strtoul(argv[2], NULL, 10);
+  printf("MAX_BACKUPS: %lu\n", MAX_BACKUPS);
+
+  MAX_THREADS = strtoul(argv[3], NULL, 10);
+  printf("MAX_THREADS: %lu\n", MAX_THREADS);
 
   DIR *dir = opendir(jobs_dir);
   if (!dir) {
@@ -71,7 +77,7 @@ int main(int argc, char *argv[]) {
     strncpy(out_path, job_path, strlen(job_path) - 4); // remove ".job"
     strcat(out_path, ".out");
 
-    // se calhar criar uma macro no constants.h para estas duas
+    // TODO se calhar criar uma macro no constants.h para estas duas
     int open_flags = O_CREAT | O_WRONLY | O_TRUNC;
     // rw-rw-rw (or 0666)
     mode_t file_perms = S_IRUSR | S_IWUSR | S_IRGRP | S_IWGRP | S_IROTH | S_IWOTH;
@@ -83,12 +89,12 @@ int main(int argc, char *argv[]) {
       return 1;
     }
 
-    read_file(job_fd, out_fd);
+    read_file(job_fd, out_fd, job_path);
 
     // TODO fechar os ficheiros aqui
     if (close(job_fd) < 0) {
       fprintf(stderr, "Failed to close .job file: %s\n", job_path);
-      kvs_terminate();
+      kvs_terminate(); // TODO ver se é preciso terminar ou returnar ou exitar
     }
 
     if (close(out_fd) < 0) {
@@ -96,7 +102,8 @@ int main(int argc, char *argv[]) {
       kvs_terminate();
     }
   }
-  free(dir);
+  // free(dir);
+  closedir(dir);
 
   return kvs_terminate();
 }
