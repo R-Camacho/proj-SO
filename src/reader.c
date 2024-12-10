@@ -99,8 +99,8 @@ void read_file(int in_fd, int out_fd, const char *job_path) {
       } else {                    // parent process
         printf("next command\n"); // TODO remover
 
-        wait(NULL);
-        sem_post(&sem); // liberta o semáfor
+        // wait(NULL);
+        sem_post(&sem); // liberta o semáforo
       }
       printf("next command outside\n"); // TODO remover
       break;

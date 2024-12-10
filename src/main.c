@@ -15,7 +15,7 @@
 
 // maybe fazer main.h ?
 
-unsigned int MAX_BACKUPS;
+size_t MAX_BACKUPS;
 size_t MAX_THREADS;
 sem_t sem; // TODO ver onde meter isto;
 
@@ -44,7 +44,7 @@ int main(int argc, char *argv[]) {
 
   unsigned long temp_max_backups = strtoul(argv[2], NULL, 10);
   MAX_BACKUPS                    = (unsigned int)temp_max_backups;
-  printf("MAX_BACKUPS: %u\n", MAX_BACKUPS);
+  printf("MAX_BACKUPS: %lu\n", MAX_BACKUPS);
 
   MAX_THREADS = strtoul(argv[3], NULL, 10);
   printf("MAX_THREADS: %lu\n", MAX_THREADS);
@@ -95,7 +95,7 @@ int main(int argc, char *argv[]) {
     }
 
     // inicializar semáforo
-    if (sem_init(&sem, 0, MAX_BACKUPS) != 0) {
+    if (sem_init(&sem, 0, (unsigned int)MAX_BACKUPS) != 0) {
       fprintf(stderr, "Failed to initialize semaphore\n");
       return -1;
     }
@@ -112,9 +112,9 @@ int main(int argc, char *argv[]) {
       fprintf(stderr, "Failed to close .out file: %s\n", out_path);
       kvs_terminate();
     }
+    sem_destroy(&sem);
   }
   // destroi o semáforo
-  sem_destroy(&sem);
   // free(dir);
   closedir(dir);
 
