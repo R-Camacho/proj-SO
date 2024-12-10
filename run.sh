@@ -20,7 +20,7 @@ make
 
 #valgrind --leak-check=full -s --show-leak-kinds=all ./kvs $1 $2 $3
 # ou sem valgrind
- ./kvs $1 $2 $3
+./kvs $1 $2 $3
 
 
 cd ..
