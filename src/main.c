@@ -1,7 +1,6 @@
 #include <dirent.h>
 #include <fcntl.h>
 #include <limits.h>
-#include <semaphore.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -15,7 +14,6 @@
 #include "thread_manager.h"
 
 size_t MAX_BACKUPS;
-sem_t sem; // TODO ver onde meter isto;
 
 int is_job_file(const char *file_name) {
   const char *dot = strrchr(file_name, '.'); // last dot on file_name
@@ -31,8 +29,8 @@ int main(int argc, char *argv[]) {
   }
 
   // TODO isto é desnecessário
-  if (argc < 3) {                                                          // menor que 3 ou 2?
-    fprintf(stderr, "Usage: %s <job_directory> [MAX_THREADS]\n", argv[0]); // ajustar estes parenteses
+  if (argc < 4) {                                                                        // menor que 3 ou 2?
+    fprintf(stderr, "Usage: %s <job_directory> <MAX_BACKUPS> <MAX_THREADS>\n", argv[0]); // ajustar estes parenteses
     kvs_terminate();
     return 1;
   }
@@ -62,7 +60,7 @@ int main(int argc, char *argv[]) {
       continue;
 
     // construct full path for the .job file
-    // job_path = jobs_dir
+    // job_path = jobs_dir/entry->d_name
     char job_path[PATH_MAX] = ""; // TODO talvez mudar para uma constante do header file
     strncpy(job_path, jobs_dir, PATH_MAX);
     strcat(job_path, "/");
@@ -70,7 +68,6 @@ int main(int argc, char *argv[]) {
 
     thread_manager_add_job(job_path);
   }
-  // TODO tirar free(dir);
   closedir(dir);
 
   thread_manager_destroy();

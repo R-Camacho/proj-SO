@@ -1,6 +1,5 @@
 #include "reader.h"
 
-extern sem_t sem;
 
 void read_file(int in_fd, int out_fd, const char *job_path) {
   size_t backup = 0;
@@ -10,9 +9,6 @@ void read_file(int in_fd, int out_fd, const char *job_path) {
     char values[MAX_WRITE_SIZE][MAX_STRING_SIZE] = { 0 };
     unsigned int delay;
     size_t num_pairs;
-
-    // printf("> "); // TODO se calhar tirar isto
-    //  fflush(stdout); // e isto também
 
     switch (get_next(in_fd)) {
     case CMD_WRITE:
@@ -77,13 +73,10 @@ void read_file(int in_fd, int out_fd, const char *job_path) {
     case CMD_BACKUP:
       backup++;
 
-      sem_wait(&sem);
       int pid = fork();
       if (pid < 0) { // error handling
         fprintf(stderr, "Failed to fork\n");
-        sem_post(&sem); // liberta o semáforo
-        return;
-
+        return;              // TODO error handling
       } else if (pid == 0) { // child process
 
         printf("Backup %lu started\n", backup); // TODO remover
@@ -92,15 +85,13 @@ void read_file(int in_fd, int out_fd, const char *job_path) {
           exit(1);
         }
         kvs_terminate(); // TODO ver se é preciso terminar nos filhos, ver se é preciso free dir nos filhos e se calhar criar uma funcao para dar free em tudo
-        sem_post(&sem);  // liberta o semáforo
         printf("Backup %lu done\n", backup); // TODO remover
-        exit(0);
+        exit(0);                             // TODO em vez de exit(0) usar _exit(0)
 
       } else {                    // parent process
         printf("next command\n"); // TODO remover
 
-        // wait(NULL);
-        sem_post(&sem); // liberta o semáforo
+        wait(NULL);
       }
       printf("next command outside\n"); // TODO remover
       break;

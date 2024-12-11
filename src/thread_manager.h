@@ -1,8 +1,6 @@
 #ifndef THREAD_H
 #define THREAD_H
 
-#define _DEFAULT_SOURCE // to use usleep
-
 #include <fcntl.h>
 #include <pthread.h>
 #include <stdio.h>

@@ -2,6 +2,12 @@
 
 static struct HashTable *kvs_table = NULL;
 
+static pthread_mutex_t kvs_mutex = PTHREAD_MUTEX_INITIALIZER;
+
+pthread_mutex_t backup_mutex = PTHREAD_MUTEX_INITIALIZER;
+pthread_cond_t backup_cond   = PTHREAD_COND_INITIALIZER;
+size_t active_backups        = 0;
+
 
 /// Calculates a timespec from a delay in milliseconds.
 /// @param delay_ms Delay in milliseconds.
@@ -11,28 +17,37 @@ static struct timespec delay_to_timespec(unsigned int delay_ms) {
 }
 
 int kvs_init() {
+  pthread_mutex_lock(&kvs_mutex);
   if (kvs_table != NULL) {
     fprintf(stderr, "KVS state has already been initialized\n");
+    pthread_mutex_unlock(&kvs_mutex);
     return 1;
   }
 
   kvs_table = create_hash_table();
+  pthread_mutex_unlock(&kvs_mutex);
   return kvs_table == NULL;
 }
 
 int kvs_terminate() {
+  pthread_mutex_lock(&kvs_mutex);
   if (kvs_table == NULL) {
     fprintf(stderr, "KVS state must be initialized\n");
+    pthread_mutex_unlock(&kvs_mutex);
     return 1;
   }
 
   free_table(kvs_table);
+  kvs_table = NULL;
+  pthread_mutex_unlock(&kvs_mutex);
   return 0;
 }
 
 int kvs_write(size_t num_pairs, char keys[][MAX_STRING_SIZE], char values[][MAX_STRING_SIZE]) {
+  pthread_mutex_lock(&kvs_mutex);
   if (kvs_table == NULL) {
     fprintf(stderr, "KVS state must be initialized\n");
+    pthread_mutex_unlock(&kvs_mutex);
     return 1;
   }
 
@@ -41,15 +56,20 @@ int kvs_write(size_t num_pairs, char keys[][MAX_STRING_SIZE], char values[][MAX_
       fprintf(stderr, "Failed to write keypair (%s,%s)\n", keys[i], values[i]);
     }
   }
-
+  pthread_mutex_unlock(&kvs_mutex);
   return 0;
 }
 
 int kvs_read(size_t num_pairs, char keys[][MAX_STRING_SIZE], int fd) {
+  pthread_mutex_lock(&kvs_mutex);
   if (kvs_table == NULL) {
     fprintf(stderr, "KVS state must be initialized\n");
+    pthread_mutex_unlock(&kvs_mutex);
     return 1;
   }
+
+  // sort keys lexicographically (using strcmp comparator)
+  qsort(keys, num_pairs, MAX_STRING_SIZE, (int (*)(const void *, const void *))strcmp);
 
   char temp[MAX_WRITE_SIZE]; // TODO verificar constante
   char *buffer = (char *)malloc(MAX_WRITE_SIZE * sizeof(char));
@@ -63,26 +83,26 @@ int kvs_read(size_t num_pairs, char keys[][MAX_STRING_SIZE], int fd) {
       snprintf(temp, MAX_WRITE_SIZE, "(%s,KVSERROR)", keys[i]); // TODO verificar constante
     } else {
       snprintf(temp, MAX_WRITE_SIZE, "(%s,%s)", keys[i], result);
+      free(result);
     }
     strncat(buffer, temp, strlen(temp));
-    free(result);
   }
   strcat(buffer, "]\n");
 
   if (write(fd, buffer, strlen(buffer)) != (ssize_t)(strlen(buffer))) {
     fprintf(stderr, "Failed to write to .out file\n");
-    kvs_terminate(); // TODO ver se é preciso terminar ou basta dar return/continue/exit
-    return 1;
-    //  TODO exit(1);
+    pthread_mutex_unlock(&kvs_mutex);
   }
   free(buffer);
-
+  pthread_mutex_unlock(&kvs_mutex);
   return 0;
 }
 
 int kvs_delete(size_t num_pairs, char keys[][MAX_STRING_SIZE], int fd) {
+  pthread_mutex_lock(&kvs_mutex);
   if (kvs_table == NULL) {
     fprintf(stderr, "KVS state must be initialized\n");
+    pthread_mutex_unlock(&kvs_mutex);
     return 1;
   }
   int aux = 0;
@@ -108,16 +128,23 @@ int kvs_delete(size_t num_pairs, char keys[][MAX_STRING_SIZE], int fd) {
 
   if (write(fd, buffer, strlen(buffer)) != (ssize_t)(strlen(buffer))) {
     fprintf(stderr, "Failed to write to .out file\n");
-    kvs_terminate(); // TODO ver se é preciso terminar ou basta dar return/continue/exit
+    pthread_mutex_unlock(&kvs_mutex);
+    free(buffer);
     return 1;
     //  TODO exit(1);
   }
   free(buffer);
-
+  pthread_mutex_unlock(&kvs_mutex);
   return 0;
 }
 
 void kvs_show(int fd) {
+  pthread_mutex_lock(&kvs_mutex);
+  if (kvs_table == NULL) {
+    fprintf(stderr, "KVS state must be initialized\n");
+    pthread_mutex_unlock(&kvs_mutex);
+    return;
+  }
   char temp[MAX_WRITE_SIZE];                                    // TODO verificar constante
   char *buffer = (char *)malloc(MAX_WRITE_SIZE * sizeof(char)); // TODO verificar constante
   memset(buffer, 0, sizeof(*buffer));
@@ -134,11 +161,13 @@ void kvs_show(int fd) {
   }
   if (write(fd, buffer, strlen(buffer)) != (ssize_t)(strlen(buffer))) {
     fprintf(stderr, "Failed to write to .out file\n");
-    kvs_terminate(); // TODO ver se é preciso terminar ou basta dar return/continue/exit
-    // return 1;
+    pthread_mutex_unlock(&kvs_mutex);
+    free(buffer);
+    return;
     //  TODO exit(1);
   }
   free(buffer);
+  pthread_mutex_unlock(&kvs_mutex);
 }
 
 // TODO
