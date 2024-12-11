@@ -5,8 +5,4 @@ DELETE [a,naoexiste]
 SHOW
 READ [naoexiste,b,a]
 HELP
-BACKUP
 WRITE [(f,filipe)(n,no)]
-BACKUP
-WRITE [(j,jose)]
-BACKUP

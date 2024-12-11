@@ -8,6 +8,6 @@
 #define MAX_JOB_FILE_NAME_SIZE 256
 
 extern size_t MAX_BACKUPS; // argv[2]
-extern size_t MAX_THREADS; // argv[3]
+// TODO extern size_t MAX_THREADS; // argv[3]
 
 #endif // CONSTANTS_H

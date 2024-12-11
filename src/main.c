@@ -12,11 +12,9 @@
 #include "operations.h"
 #include "parser.h"
 #include "reader.h"
-
-// maybe fazer main.h ?
+#include "thread_manager.h"
 
 size_t MAX_BACKUPS;
-size_t MAX_THREADS;
 sem_t sem; // TODO ver onde meter isto;
 
 int is_job_file(const char *file_name) {
@@ -42,11 +40,10 @@ int main(int argc, char *argv[]) {
   char *jobs_dir = argv[1];
   printf("jobs_dir: %s\n", jobs_dir);
 
-  unsigned long temp_max_backups = strtoul(argv[2], NULL, 10);
-  MAX_BACKUPS                    = (unsigned int)temp_max_backups;
+  MAX_BACKUPS = strtoul(argv[2], NULL, 10);
   printf("MAX_BACKUPS: %lu\n", MAX_BACKUPS);
 
-  MAX_THREADS = strtoul(argv[3], NULL, 10);
+  size_t MAX_THREADS = strtoul(argv[3], NULL, 10);
   printf("MAX_THREADS: %lu\n", MAX_THREADS);
 
   DIR *dir = opendir(jobs_dir);
@@ -55,6 +52,8 @@ int main(int argc, char *argv[]) {
     kvs_terminate();
     return 1;
   }
+
+  thread_manager_init(MAX_THREADS);
 
   struct dirent *entry;
   while ((entry = readdir(dir)) != NULL) {
@@ -69,54 +68,12 @@ int main(int argc, char *argv[]) {
     strcat(job_path, "/");
     strcat(job_path, entry->d_name);
 
-    int job_fd = open(job_path, O_RDONLY);
-    if (job_fd < 0) {
-      fprintf(stderr, "Failed to open job file %s", job_path);
-      kvs_terminate();
-      return 1; // TODO tirar a duvida se o programa acaba ou simplesmente avançamos para outro ficheiro
-    }
-    printf("Opening file: %s\n", job_path);
-
-    // Create correspondent .out file;
-    char out_path[PATH_MAX] = "";
-    strncpy(out_path, job_path, strlen(job_path) - 4); // remove ".job"
-    strcat(out_path, ".out");
-
-    // TODO se calhar criar uma macro no constants.h para estas duas
-    int open_flags = O_CREAT | O_WRONLY | O_TRUNC;
-    // rw-rw-rw (or 0666)
-    mode_t file_perms = S_IRUSR | S_IWUSR | S_IRGRP | S_IWGRP | S_IROTH | S_IWOTH;
-
-    int out_fd = open(out_path, open_flags, file_perms);
-    if (out_fd < 0) {
-      fprintf(stderr, "Failed to open .out file:%s \n", out_path);
-      kvs_terminate(); // TODO terminar ou avancar para outro ?
-      return 1;
-    }
-
-    // inicializar semáforo
-    if (sem_init(&sem, 0, (unsigned int)MAX_BACKUPS) != 0) {
-      fprintf(stderr, "Failed to initialize semaphore\n");
-      return -1;
-    }
-
-    read_file(job_fd, out_fd, job_path);
-
-    // TODO fechar os ficheiros aqui
-    if (close(job_fd) < 0) {
-      fprintf(stderr, "Failed to close .job file: %s\n", job_path);
-      kvs_terminate(); // TODO ver se é preciso terminar ou returnar ou exitar
-    }
-
-    if (close(out_fd) < 0) {
-      fprintf(stderr, "Failed to close .out file: %s\n", out_path);
-      kvs_terminate();
-    }
-    sem_destroy(&sem);
+    thread_manager_add_job(job_path);
   }
-  // destroi o semáforo
-  // free(dir);
+  // TODO tirar free(dir);
   closedir(dir);
+
+  thread_manager_destroy();
 
   return kvs_terminate();
 }

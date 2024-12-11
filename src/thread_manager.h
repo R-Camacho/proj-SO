@@ -1,11 +1,14 @@
 #ifndef THREAD_H
 #define THREAD_H
 
+#define _DEFAULT_SOURCE // to use usleep
+
 #include <fcntl.h>
 #include <pthread.h>
 #include <stdio.h>
 #include <string.h>
 #include <sys/stat.h>
+#include <unistd.h>
 
 #include "reader.h"
 
@@ -61,6 +64,10 @@ void *process_file(void *arg);
 /// @param max_threads The maximum number of threads to be created.
 /// @return 0 if the thread manager was initialized successfully, 1 otherwise.
 int thread_manager_init(size_t max_threads);
+
+/// Adds a job to the thread manager's file queue.
+/// @param file_path The path of the job file to be added.
+void thread_manager_add_job(const char *file_path);
 
 /// Destroys the thread manager and frees all associated resources.
 void thread_manager_destroy();

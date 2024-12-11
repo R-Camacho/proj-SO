@@ -3,11 +3,10 @@
 t_manager *thread_manager = NULL;
 
 int file_queue_init(FileQueue *queue) {
-  if (queue != NULL) {
-    fprintf(stderr, "File queue has already been initialised\n");
+  if (queue == NULL) {
+    fprintf(stderr, "Queue pointer is NULL\n");
     return 1;
   }
-
   queue->head = queue->tail = NULL;
   pthread_mutex_init(&queue->mutex, NULL);
   pthread_cond_init(&queue->cond, NULL);
@@ -35,16 +34,25 @@ int file_queue_destroy(FileQueue *queue) {
 }
 
 void file_queue_push(FileQueue *queue, const char *file_path) {
-  FileNode *node  = (FileNode *)malloc(sizeof(FileNode));
+  FileNode *node = (FileNode *)malloc(sizeof(FileNode));
+  if (node == NULL) {
+    fprintf(stderr, "Failed to allocate memory for FileNode\n");
+    return;
+  }
   node->file_path = strdup(file_path);
-  node->next      = NULL;
+  if (node->file_path == NULL) {
+    fprintf(stderr, "Failed to duplicate file path\n");
+    free(node);
+    return;
+  }
+  node->next = NULL;
 
   pthread_mutex_lock(&queue->mutex);
   if (queue->head == NULL) { // empty
     queue->head = queue->tail = node;
   } else {
-    queue->head->next = node;
-    queue->head       = node;
+    queue->tail->next = node;
+    queue->tail       = node;
   }
   pthread_cond_signal(&queue->cond);
   pthread_mutex_unlock(&queue->mutex);
@@ -55,14 +63,14 @@ char *file_queue_pop(FileQueue *queue) {
   while (queue->head == NULL && !thread_manager->stop) {
     pthread_cond_wait(&queue->cond, &queue->mutex); // wait for file_queue_push to signal cond
   }
-  if (thread_manager->stop) { // TODO isto é inutil (se calhar)
+  if (thread_manager->stop && queue->head == NULL) { // TODO isto é inutil (se calhar)
     pthread_mutex_unlock(&queue->mutex);
     return NULL;
   }
-  FileNode *node = queue->tail;
-  queue->tail    = queue->tail->next;
-  if (queue->tail == NULL) {
-    queue->head = NULL;
+  FileNode *node = queue->head;
+  queue->head    = node->next;
+  if (queue->head == NULL) {
+    queue->tail = NULL;
   }
   pthread_mutex_unlock(&queue->mutex);
 
@@ -74,10 +82,12 @@ char *file_queue_pop(FileQueue *queue) {
 void *process_file(void *arg) {
   (void)arg; // Unused
   while (1) {
-    char *file_path;
-    if ((file_path = file_queue_pop(&thread_manager->queue)) == NULL) {
+    char *file_path = file_queue_pop(&thread_manager->queue);
+    if (file_path == NULL) {
       break; // no more files to process
     }
+
+    printf("opening file: %s\n", file_path); // TODO tirar
 
     int in_fd = open(file_path, O_RDONLY);
     if (in_fd < 0) {
@@ -85,7 +95,6 @@ void *process_file(void *arg) {
       free(file_path);
       continue;
     }
-
     // Create correspondent .out file;
     char out_path[PATH_MAX] = "";
     strncpy(out_path, file_path, strlen(file_path) - 4); // remove ".job"
@@ -125,15 +134,23 @@ int thread_manager_init(size_t max_threads) {
     return 1;
   }
 
+  file_queue_init(&thread_manager->queue);
   thread_manager->max_threads = max_threads;
   thread_manager->threads     = (pthread_t *)malloc(max_threads * sizeof(pthread_t));
   thread_manager->stop        = 0; // TODO se calhar tirar o stop
 
   for (size_t i = 0; i < max_threads; i++) {
-    pthread_create(&thread_manager->threads[i], NULL, process_file, NULL);
+    if (pthread_create(&thread_manager->threads[i], NULL, process_file, NULL) != 0) {
+      fprintf(stderr, "Failed to create thread\n");
+      return 1;
+    }
   }
 
   return 0;
+}
+
+void thread_manager_add_job(const char *file_path) {
+  file_queue_push(&thread_manager->queue, file_path);
 }
 
 void thread_manager_destroy() {
