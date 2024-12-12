@@ -92,26 +92,31 @@ void read_file(int in_fd, int out_fd, const char *job_path) {
       }
       active_backups++;
       pthread_mutex_unlock(&backup_mutex);
-
+      // TODO memory leaks
       int pid = fork();
       if (pid < 0) { // error handling
         fprintf(stderr, "Failed to fork\n");
-        return;              // TODO error handling
+        pthread_mutex_lock(&backup_mutex);
+        active_backups--;
+        pthread_cond_signal(&backup_cond);
+        pthread_mutex_unlock(&backup_mutex);
       } else if (pid == 0) { // child process
 
         printf("Backup %lu started\n", backup_count); // TODO remover
         if (kvs_backup(job_path, backup_count)) {
           fprintf(stderr, "Failed to perform backup.\n");
-          exit(1);
+          _exit(1);
         }
-        kvs_terminate(); // TODO ver se é preciso terminar nos filhos, ver se é preciso free dir nos filhos e se calhar criar uma funcao para dar free em tudo
-        printf("Backup %lu done\n", backup_count); // TODO remover
-        exit(0);                                   // TODO em vez de exit(0) usar _exit(0)
-
-      } else {                    // parent process
-        printf("next command\n"); // TODO remover
-
-        wait(NULL);
+        pthread_mutex_lock(&backup_mutex);
+        active_backups--;
+        pthread_cond_signal(&backup_cond);
+        pthread_mutex_unlock(&backup_mutex);
+        printf("Backup %lu finished\n", backup_count); // TODO remover
+        // kvs_terminate();
+        _exit(0);
+      } else {
+        // wait(NULL);
+        _exit(0);
       }
       printf("next command outside\n"); // TODO remover
       break;

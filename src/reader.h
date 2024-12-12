@@ -2,6 +2,7 @@
 #define READER_H
 
 
+#include <errno.h>
 #include <semaphore.h>
 #include <stdio.h>
 #include <sys/types.h>
