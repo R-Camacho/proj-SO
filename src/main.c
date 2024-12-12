@@ -29,8 +29,8 @@ int main(int argc, char *argv[]) {
   }
 
   // TODO isto é desnecessário
-  if (argc < 4) {                                                                        // menor que 3 ou 2?
-    fprintf(stderr, "Usage: %s <job_directory> <MAX_BACKUPS> <MAX_THREADS>\n", argv[0]); // ajustar estes parenteses
+  if (argc < 4) {
+    fprintf(stderr, "Usage: %s <job_directory> <MAX_BACKUPS> <MAX_THREADS>\n", argv[0]);
     kvs_terminate();
     return 1;
   }

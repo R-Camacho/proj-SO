@@ -1,8 +1,9 @@
 #include "reader.h"
 
+extern size_t active_backups;
 
 void read_file(int in_fd, int out_fd, const char *job_path) {
-  size_t backup = 0;
+  size_t backup_count = 0;
 
   while (1) {
     char keys[MAX_WRITE_SIZE][MAX_STRING_SIZE]   = { 0 };
@@ -71,7 +72,7 @@ void read_file(int in_fd, int out_fd, const char *job_path) {
       break;
 
     case CMD_BACKUP:
-      backup++;
+      backup_count++;
 
       int pid = fork();
       if (pid < 0) { // error handling
@@ -79,14 +80,14 @@ void read_file(int in_fd, int out_fd, const char *job_path) {
         return;              // TODO error handling
       } else if (pid == 0) { // child process
 
-        printf("Backup %lu started\n", backup); // TODO remover
-        if (kvs_backup(job_path, backup)) {
+        printf("Backup %lu started\n", backup_count); // TODO remover
+        if (kvs_backup(job_path, backup_count)) {
           fprintf(stderr, "Failed to perform backup.\n");
           exit(1);
         }
         kvs_terminate(); // TODO ver se é preciso terminar nos filhos, ver se é preciso free dir nos filhos e se calhar criar uma funcao para dar free em tudo
-        printf("Backup %lu done\n", backup); // TODO remover
-        exit(0);                             // TODO em vez de exit(0) usar _exit(0)
+        printf("Backup %lu done\n", backup_count); // TODO remover
+        exit(0);                                   // TODO em vez de exit(0) usar _exit(0)
 
       } else {                    // parent process
         printf("next command\n"); // TODO remover
