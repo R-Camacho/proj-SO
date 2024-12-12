@@ -18,7 +18,7 @@ make format ..
 
 make
 
-valgrind --leak-check=full -s --show-leak-kinds=all ./kvs $1 $2 $3
+valgrind --leak-check=full -s --show-leak-kinds=all --track-origins=yes ./kvs $1 $2 $3
 # ou sem valgrind
 #./kvs $1 $2 $3
 

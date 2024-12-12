@@ -1,6 +1,9 @@
 #include "reader.h"
 
-extern size_t active_backups;
+pthread_mutex_t backup_mutex = PTHREAD_MUTEX_INITIALIZER;
+pthread_cond_t backup_cond   = PTHREAD_COND_INITIALIZER;
+size_t active_backups        = 0;
+
 
 void read_file(int in_fd, int out_fd, const char *job_path) {
   size_t backup_count = 0;
@@ -82,6 +85,13 @@ void read_file(int in_fd, int out_fd, const char *job_path) {
 
     case CMD_BACKUP:
       backup_count++;
+
+      pthread_mutex_lock(&backup_mutex);
+      while (active_backups >= MAX_BACKUPS) {
+        pthread_cond_wait(&backup_cond, &backup_mutex);
+      }
+      active_backups++;
+      pthread_mutex_unlock(&backup_mutex);
 
       int pid = fork();
       if (pid < 0) { // error handling

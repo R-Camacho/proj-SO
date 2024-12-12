@@ -4,6 +4,8 @@
 #include <ctype.h>
 #include <stdlib.h>
 
+// TODO static pthread_mutex_t kvs_mutex = PTHREAD_MUTEX_INITIALIZER;
+
 // Hash function based on key initial.
 // @param key Lowercase alphabetical string.
 // @return hash.
@@ -108,4 +110,17 @@ void free_table(HashTable *ht) {
     }
   }
   free(ht);
+}
+
+KeyNode *find_node(HashTable *ht, char *key) {
+  int index        = hash(key);
+  KeyNode *keyNode = ht->table[index];
+
+  while (keyNode != NULL) {
+    if (strcmp(keyNode->key, key) == 0) {
+      return keyNode;
+    }
+    keyNode = keyNode->next; // Move to the next node
+  }
+  return NULL; // Key not found
 }

@@ -2,12 +2,7 @@
 
 static struct HashTable *kvs_table = NULL;
 
-static pthread_mutex_t kvs_mutex = PTHREAD_MUTEX_INITIALIZER;
-
-pthread_mutex_t backup_mutex = PTHREAD_MUTEX_INITIALIZER;
-pthread_cond_t backup_cond   = PTHREAD_COND_INITIALIZER;
-size_t active_backups        = 0;
-
+pthread_rwlock_t kvs_lock = PTHREAD_RWLOCK_INITIALIZER;
 
 /// Calculates a timespec from a delay in milliseconds.
 /// @param delay_ms Delay in milliseconds.
@@ -17,62 +12,64 @@ static struct timespec delay_to_timespec(unsigned int delay_ms) {
 }
 
 int kvs_init() {
-  pthread_mutex_lock(&kvs_mutex);
   if (kvs_table != NULL) {
     fprintf(stderr, "KVS state has already been initialized\n");
-    pthread_mutex_unlock(&kvs_mutex);
     return 1;
   }
 
   kvs_table = create_hash_table();
-  pthread_mutex_unlock(&kvs_mutex);
   return kvs_table == NULL;
 }
 
 int kvs_terminate() {
-  pthread_mutex_lock(&kvs_mutex);
   if (kvs_table == NULL) {
     fprintf(stderr, "KVS state must be initialized\n");
-    pthread_mutex_unlock(&kvs_mutex);
     return 1;
   }
 
   free_table(kvs_table);
   kvs_table = NULL;
-  pthread_mutex_unlock(&kvs_mutex);
   return 0;
 }
 
 int kvs_write(size_t num_pairs, char keys[][MAX_STRING_SIZE], char values[][MAX_STRING_SIZE]) {
-  pthread_mutex_lock(&kvs_mutex);
   if (kvs_table == NULL) {
     fprintf(stderr, "KVS state must be initialized\n");
-    pthread_mutex_unlock(&kvs_mutex);
     return 1;
   }
 
-  // sort keys lexicographically (using strcmp comparator)
-  qsort(keys, num_pairs, MAX_STRING_SIZE, (int (*)(const void *, const void *))strcmp);
+  // sort keys and values lexicographically (using pair comparator)
+  KVPair *pairs = (KVPair *)malloc(num_pairs * sizeof(KVPair));
+  for (size_t i = 0; i < num_pairs; i++) {
+    pairs[i].key   = keys[i];
+    pairs[i].value = values[i];
+  }
+  qsort(pairs, num_pairs, sizeof(KVPair), (int (*)(const void *, const void *))kv_pair_comparator);
+
+
+  pthread_rwlock_wrlock(&kvs_lock);
 
   for (size_t i = 0; i < num_pairs; i++) {
-    if (write_pair(kvs_table, keys[i], values[i]) != 0) {
-      fprintf(stderr, "Failed to write keypair (%s,%s)\n", keys[i], values[i]);
+    if (write_pair(kvs_table, pairs[i].key, pairs[i].value) != 0) {
+      fprintf(stderr, "Failed to write keypair (%s,%s)\n", pairs[i].key, pairs[i].value);
     }
   }
-  pthread_mutex_unlock(&kvs_mutex);
+  pthread_rwlock_wrlock(&kvs_lock);
+
+  free(pairs);
   return 0;
 }
 
 int kvs_read(size_t num_pairs, char keys[][MAX_STRING_SIZE], int fd) {
-  pthread_mutex_lock(&kvs_mutex);
   if (kvs_table == NULL) {
     fprintf(stderr, "KVS state must be initialized\n");
-    pthread_mutex_unlock(&kvs_mutex);
     return 1;
   }
 
   // sort keys lexicographically (using strcmp comparator)
   qsort(keys, num_pairs, MAX_STRING_SIZE, (int (*)(const void *, const void *))strcmp);
+
+  pthread_rwlock_rdlock(&kvs_lock); // no one can write into the hash table
 
   char temp[MAX_WRITE_SIZE]; // TODO verificar constante
   char *buffer = (char *)malloc(MAX_WRITE_SIZE * sizeof(char));
@@ -92,22 +89,25 @@ int kvs_read(size_t num_pairs, char keys[][MAX_STRING_SIZE], int fd) {
   }
   strcat(buffer, "]\n");
 
+  pthread_rwlock_unlock(&kvs_lock); // allow writing again
+
   if (write(fd, buffer, strlen(buffer)) != (ssize_t)(strlen(buffer))) {
     fprintf(stderr, "Failed to write to .out file\n");
-    pthread_mutex_unlock(&kvs_mutex);
+    return 1;
   }
   free(buffer);
-  pthread_mutex_unlock(&kvs_mutex);
   return 0;
 }
 
 int kvs_delete(size_t num_pairs, char keys[][MAX_STRING_SIZE], int fd) {
-  pthread_mutex_lock(&kvs_mutex);
   if (kvs_table == NULL) {
     fprintf(stderr, "KVS state must be initialized\n");
-    pthread_mutex_unlock(&kvs_mutex);
     return 1;
   }
+  // sort keys lexicographically (using strcmp comparator)
+  qsort(keys, num_pairs, MAX_STRING_SIZE, (int (*)(const void *, const void *))strcmp);
+
+  pthread_rwlock_wrlock(&kvs_lock);
   int aux = 0;
 
   char temp[MAX_WRITE_SIZE];                                    // TODO verificar constante
@@ -128,26 +128,25 @@ int kvs_delete(size_t num_pairs, char keys[][MAX_STRING_SIZE], int fd) {
   if (aux) {
     strcat(buffer, "]\n");
   }
+  pthread_rwlock_unlock(&kvs_lock);
 
   if (write(fd, buffer, strlen(buffer)) != (ssize_t)(strlen(buffer))) {
     fprintf(stderr, "Failed to write to .out file\n");
-    pthread_mutex_unlock(&kvs_mutex);
     free(buffer);
     return 1;
-    //  TODO exit(1);
   }
   free(buffer);
-  pthread_mutex_unlock(&kvs_mutex);
   return 0;
 }
 
 void kvs_show(int fd) {
-  pthread_mutex_lock(&kvs_mutex);
   if (kvs_table == NULL) {
     fprintf(stderr, "KVS state must be initialized\n");
-    pthread_mutex_unlock(&kvs_mutex);
     return;
   }
+
+  pthread_rwlock_rdlock(&kvs_lock); // no one can write into the hash table
+
   char temp[MAX_WRITE_SIZE];                                    // TODO verificar constante
   char *buffer = (char *)malloc(MAX_WRITE_SIZE * sizeof(char)); // TODO verificar constante
   memset(buffer, 0, sizeof(*buffer));
@@ -162,15 +161,15 @@ void kvs_show(int fd) {
       keyNode = keyNode->next; // Move to the next node
     }
   }
+
+  pthread_rwlock_unlock(&kvs_lock);
+
   if (write(fd, buffer, strlen(buffer)) != (ssize_t)(strlen(buffer))) {
     fprintf(stderr, "Failed to write to .out file\n");
-    pthread_mutex_unlock(&kvs_mutex);
     free(buffer);
     return;
-    //  TODO exit(1);
   }
   free(buffer);
-  pthread_mutex_unlock(&kvs_mutex);
 }
 
 // TODO
@@ -204,4 +203,8 @@ int kvs_backup(const char *job_path, size_t backup) {
 void kvs_wait(unsigned int delay_ms) {
   struct timespec delay = delay_to_timespec(delay_ms);
   nanosleep(&delay, NULL);
+}
+
+int kv_pair_comparator(KVPair *a, KVPair *b) {
+  return strcmp(a->key, b->key);
 }

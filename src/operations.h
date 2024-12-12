@@ -16,6 +16,12 @@
 #include "constants.h"
 #include "kvs.h"
 
+// to sort keys and values equally
+typedef struct kv_pair {
+  char *key;
+  char *value;
+} KVPair;
+
 /// Initializes the KVS state.
 /// @return 0 if the KVS state was initialized successfully, 1 otherwise.
 int kvs_init();
@@ -62,5 +68,11 @@ void kvs_wait_backup();
 /// Waits for a given amount of time.
 /// @param delay_us Delay in milliseconds.
 void kvs_wait(unsigned int delay_ms);
+
+/// Compares two key value pairs.
+/// @param a First key value pair.
+/// @param b Second key value pair.
+/// @return 0 if the pairs are equal, 1 otherwise.
+int kv_pair_comparator(KVPair *a, KVPair *b);
 
 #endif // KVS_OPERATIONS_H
