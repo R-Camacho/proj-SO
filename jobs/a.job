@@ -6,3 +6,4 @@ SHOW
 READ [naoexiste,b,a]
 HELP
 WRITE [(f,filipe)(n,no)]
+HELP

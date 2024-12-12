@@ -5,6 +5,15 @@ extern size_t active_backups;
 void read_file(int in_fd, int out_fd, const char *job_path) {
   size_t backup_count = 0;
 
+  const char help[] = "Available commands:\n"
+                      "  WRITE [(key,value)(key2,value2),...]\n"
+                      "  READ [key,key2,...]\n"
+                      "  DELETE [key,key2,...]\n"
+                      "  SHOW\n"
+                      "  WAIT <delay_ms>\n"
+                      "  BACKUP\n"
+                      "  HELP\n";
+
   while (1) {
     char keys[MAX_WRITE_SIZE][MAX_STRING_SIZE]   = { 0 };
     char values[MAX_WRITE_SIZE][MAX_STRING_SIZE] = { 0 };
@@ -102,14 +111,6 @@ void read_file(int in_fd, int out_fd, const char *job_path) {
       break;
 
     case CMD_HELP:
-      char help[] = "Available commands:\n"
-                    "  WRITE [(key,value)(key2,value2),...]\n"
-                    "  READ [key,key2,...]\n"
-                    "  DELETE [key,key2,...]\n"
-                    "  SHOW\n"
-                    "  WAIT <delay_ms>\n"
-                    "  BACKUP\n" // Not implemented
-                    "  HELP\n";
       if (write(out_fd, help, strlen(help)) != (ssize_t)strlen(help)) {
         fprintf(stderr, "Failed to write help to .out file\n");
         // TODO ver o que fazer
