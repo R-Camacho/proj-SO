@@ -102,14 +102,14 @@ void read_file(int in_fd, int out_fd, const char *job_path) {
       break;
 
     case CMD_HELP:
-      const char help[] = "Available commands:\n"
-                          "  WRITE [(key,value)(key2,value2),...]\n"
-                          "  READ [key,key2,...]\n"
-                          "  DELETE [key,key2,...]\n"
-                          "  SHOW\n"
-                          "  WAIT <delay_ms>\n"
-                          "  BACKUP\n" // Not implemented
-                          "  HELP\n";
+      char help[] = "Available commands:\n"
+                    "  WRITE [(key,value)(key2,value2),...]\n"
+                    "  READ [key,key2,...]\n"
+                    "  DELETE [key,key2,...]\n"
+                    "  SHOW\n"
+                    "  WAIT <delay_ms>\n"
+                    "  BACKUP\n" // Not implemented
+                    "  HELP\n";
       if (write(out_fd, help, strlen(help)) != (ssize_t)strlen(help)) {
         fprintf(stderr, "Failed to write help to .out file\n");
         // TODO ver o que fazer
