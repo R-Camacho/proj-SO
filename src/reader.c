@@ -112,7 +112,7 @@ void read_file(int in_fd, int out_fd, const char *job_path) {
         pthread_cond_signal(&backup_cond);
         pthread_mutex_unlock(&backup_mutex);
         printf("Backup %lu finished\n", backup_count); // TODO remover
-        // kvs_terminate();
+        // kvs_terminate(); // isto nao é preciso
         _exit(0);
       } else {
         // wait(NULL);
