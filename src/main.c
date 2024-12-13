@@ -4,13 +4,11 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <sys/stat.h>
 #include <unistd.h>
 
 #include "constants.h"
 #include "operations.h"
 #include "parser.h"
-#include "reader.h"
 #include "thread_manager.h"
 
 size_t MAX_BACKUPS;
@@ -55,7 +53,6 @@ int main(int argc, char *argv[]) {
     return 1;
   }
 
-  // TODO isto é desnecessário
   if (argc < 4) {
     fprintf(stderr, "Usage: %s <job_directory> <MAX_BACKUPS> <MAX_THREADS>\n", argv[0]);
     kvs_terminate();
@@ -63,13 +60,10 @@ int main(int argc, char *argv[]) {
   }
 
   char *jobs_dir = argv[1]; // Directory containing job files
-  printf("jobs_dir: %s\n", jobs_dir);
 
   MAX_BACKUPS = strtoul(argv[2], NULL, 10); // Maximum number of backups
-  printf("MAX_BACKUPS: %lu\n", MAX_BACKUPS);
 
   size_t MAX_THREADS = strtoul(argv[3], NULL, 10); // Maximum number of threads
-  printf("MAX_THREADS: %lu\n", MAX_THREADS);
 
   DIR *dir = opendir(jobs_dir); // Open the job directory
   if (!dir) {
@@ -78,7 +72,11 @@ int main(int argc, char *argv[]) {
     return 1;
   }
 
-  thread_manager_init(MAX_THREADS); // Initializes all the threads
+  if (thread_manager_init(MAX_THREADS) != 0) { // Initializes all the threads
+    fprintf(stderr, "Failed to initialize thread manager\n");
+    kvs_terminate();
+    return 1;
+  }
 
   // Process each file with a .job extension in the job directory
   struct dirent *entry;
@@ -89,7 +87,7 @@ int main(int argc, char *argv[]) {
       continue;
 
     // construct full path for the .job file (job_path = jobs_dir/entry->d_name)
-    char job_path[PATH_MAX] = ""; // TODO talvez mudar para uma constante do header file
+    char job_path[PATH_MAX] = "";
     strncpy(job_path, jobs_dir, PATH_MAX);
     strcat(job_path, "/");
     strcat(job_path, entry->d_name);

@@ -4,7 +4,6 @@
 #include <ctype.h>
 #include <stdlib.h>
 
-// TODO static pthread_mutex_t kvs_mutex = PTHREAD_MUTEX_INITIALIZER;
 
 // Hash function based on key initial.
 // @param key Lowercase alphabetical string.

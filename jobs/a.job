@@ -6,6 +6,9 @@ SHOW
 READ [naoexiste,b,a]
 HELP
 WRITE [(f,filipe)(n,no)]
-HELP
 BACKUP
 SHOW
+BACKUP
+BACKUP
+SHOW
+BACKUP

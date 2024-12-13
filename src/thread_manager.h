@@ -31,8 +31,6 @@ typedef struct thread_manager {
 
 extern t_manager *thread_manager;
 
-// TODO verificar comments (ortografia / correcao)
-
 /// Initializes the file queue.
 /// @param queue Pointer to the FileQueue to be initialized.
 /// @return 0 if the queue was initialized successfully, 1 otherwise.
@@ -45,7 +43,7 @@ int file_queue_destroy(FileQueue *queue);
 
 /// Pushes a file path onto the file queue.
 /// @param queue Pointer to the FileQueue where the file path will be pushed.
-/// @param file_path The file path to be pushed onto the queue.
+/// @param file_path The path of the file to be pushed onto the queue.
 void file_queue_push(FileQueue *queue, const char *file_path);
 
 /// Pops a file path from the file queue.

@@ -63,7 +63,7 @@ char *file_queue_pop(FileQueue *queue) {
   while (queue->head == NULL && !thread_manager->stop) {
     pthread_cond_wait(&queue->cond, &queue->mutex); // wait for file_queue_push to signal cond
   }
-  if (thread_manager->stop && queue->head == NULL) { // TODO isto é inutil (se calhar)
+  if (thread_manager->stop && queue->head == NULL) {
     pthread_mutex_unlock(&queue->mutex);
     return NULL;
   }
@@ -87,8 +87,6 @@ void *process_file(void *arg) {
       break; // no more files to process
     }
 
-    printf("opening file: %s\n", file_path); // TODO tirar
-
     int in_fd = open(file_path, O_RDONLY);
     if (in_fd < 0) {
       fprintf(stderr, "Failed to open job file: %s\n", file_path);
@@ -100,7 +98,6 @@ void *process_file(void *arg) {
     strncpy(out_path, file_path, strlen(file_path) - 4); // remove ".job"
     strcat(out_path, ".out");
 
-    // TODO se calhar criar uma macro no constants.h para estas duas
     int open_flags = O_CREAT | O_WRONLY | O_TRUNC;
     // rw-rw-rw (or 0666)
     mode_t file_perms = S_IRUSR | S_IWUSR | S_IRGRP | S_IWGRP | S_IROTH | S_IWOTH;
@@ -127,17 +124,17 @@ int thread_manager_init(size_t max_threads) {
     fprintf(stderr, "Thread manager has already been initialized\n");
     return 1;
   }
-  // TODO talvez retirar as verificações do malloc
+
   thread_manager = (t_manager *)malloc(sizeof(t_manager));
   if (thread_manager == NULL) {
-    fprintf(stderr, "Failed to allocate memory for thread manager\n"); // TODO se calhar tirar estas mensagens de erro
+    fprintf(stderr, "Failed to allocate memory for thread manager\n");
     return 1;
   }
 
   file_queue_init(&thread_manager->queue);
   thread_manager->max_threads = max_threads;
   thread_manager->threads     = (pthread_t *)malloc(max_threads * sizeof(pthread_t));
-  thread_manager->stop        = 0; // TODO se calhar tirar o stop
+  thread_manager->stop        = 0;
 
   for (size_t i = 0; i < max_threads; i++) {
     if (pthread_create(&thread_manager->threads[i], NULL, process_file, NULL) != 0) {

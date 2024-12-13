@@ -1,13 +1,6 @@
 #ifndef READER_H
 #define READER_H
 
-
-#include <errno.h>
-#include <semaphore.h>
-#include <stdio.h>
-#include <sys/types.h>
-#include <sys/wait.h>
-
 #include "constants.h"
 #include "operations.h"
 #include "parser.h"

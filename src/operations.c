@@ -54,7 +54,7 @@ int kvs_write(size_t num_pairs, char keys[][MAX_STRING_SIZE], char values[][MAX_
       fprintf(stderr, "Failed to write keypair (%s,%s)\n", pairs[i].key, pairs[i].value);
     }
   }
-  pthread_rwlock_wrlock(&kvs_lock);
+  pthread_rwlock_unlock(&kvs_lock);
 
   free(pairs);
   return 0;
@@ -71,7 +71,7 @@ int kvs_read(size_t num_pairs, char keys[][MAX_STRING_SIZE], int fd) {
 
   pthread_rwlock_rdlock(&kvs_lock); // no one can write into the hash table
 
-  char temp[MAX_WRITE_SIZE]; // TODO verificar constante
+  char temp[MAX_WRITE_SIZE];
   char *buffer = (char *)malloc(MAX_WRITE_SIZE * sizeof(char));
   memset(buffer, 0, sizeof(*buffer));
   *buffer = '\0';
@@ -80,7 +80,7 @@ int kvs_read(size_t num_pairs, char keys[][MAX_STRING_SIZE], int fd) {
   for (size_t i = 0; i < num_pairs; i++) {
     char *result = read_pair(kvs_table, keys[i]);
     if (result == NULL) {
-      snprintf(temp, MAX_WRITE_SIZE, "(%s,KVSERROR)", keys[i]); // TODO verificar constante
+      snprintf(temp, MAX_WRITE_SIZE, "(%s,KVSERROR)", keys[i]);
     } else {
       snprintf(temp, MAX_WRITE_SIZE, "(%s,%s)", keys[i], result);
       free(result);
@@ -110,8 +110,8 @@ int kvs_delete(size_t num_pairs, char keys[][MAX_STRING_SIZE], int fd) {
   pthread_rwlock_wrlock(&kvs_lock);
   int aux = 0;
 
-  char temp[MAX_WRITE_SIZE];                                    // TODO verificar constante
-  char *buffer = (char *)malloc(MAX_WRITE_SIZE * sizeof(char)); // TODO verificar constante
+  char temp[MAX_WRITE_SIZE];
+  char *buffer = (char *)malloc(MAX_WRITE_SIZE * sizeof(char));
   memset(buffer, 0, sizeof(*buffer));
   *buffer = '\0';
 
@@ -121,7 +121,7 @@ int kvs_delete(size_t num_pairs, char keys[][MAX_STRING_SIZE], int fd) {
         strcat(buffer, "[");
         aux = 1;
       }
-      snprintf(temp, MAX_WRITE_SIZE, "(%s,KVSMISSING)", keys[i]); // TODO verificar constante
+      snprintf(temp, MAX_WRITE_SIZE, "(%s,KVSMISSING)", keys[i]);
       strncat(buffer, temp, strlen(temp));
     }
   }
@@ -144,37 +144,35 @@ void kvs_show(int fd) {
     fprintf(stderr, "KVS state must be initialized\n");
     return;
   }
-
   pthread_rwlock_rdlock(&kvs_lock); // no one can write into the hash table
 
-  char temp[MAX_WRITE_SIZE];                                    // TODO verificar constante
-  char *buffer = (char *)malloc(MAX_WRITE_SIZE * sizeof(char)); // TODO verificar constante
+  char temp[MAX_WRITE_SIZE];
+  char *buffer = (char *)malloc(MAX_WRITE_SIZE * sizeof(char));
   memset(buffer, 0, sizeof(*buffer));
   *buffer = '\0';
 
   for (int i = 0; i < TABLE_SIZE; i++) {
     KeyNode *keyNode = kvs_table->table[i];
     while (keyNode != NULL) {
-      snprintf(temp, MAX_WRITE_SIZE, "(%s, %s)\n", keyNode->key, keyNode->value); // TODO verificar constante
+      snprintf(temp, MAX_WRITE_SIZE, "(%s, %s)\n", keyNode->key, keyNode->value);
       strncat(buffer, temp, strlen(temp));
 
       keyNode = keyNode->next; // Move to the next node
     }
   }
 
-  pthread_rwlock_unlock(&kvs_lock);
-
   if (write(fd, buffer, strlen(buffer)) != (ssize_t)(strlen(buffer))) {
     fprintf(stderr, "Failed to write to .out file\n");
     free(buffer);
     return;
   }
+
   free(buffer);
+  pthread_rwlock_unlock(&kvs_lock);
 }
 
-// TODO
 int kvs_backup(const char *job_path, size_t backup) {
-  // TODO se calhar criar uma macro no constants.h para estas duas
+
   int open_flags = O_CREAT | O_WRONLY | O_TRUNC;
   // rw-rw-rw (or 0666)
   mode_t file_perms = S_IRUSR | S_IWUSR | S_IRGRP | S_IWGRP | S_IROTH | S_IWOTH;
@@ -195,7 +193,7 @@ int kvs_backup(const char *job_path, size_t backup) {
 
   if (close(bck_fd) < 0) {
     fprintf(stderr, "Failed to close .out file\n");
-    kvs_terminate();
+    return 1;
   }
   return 0;
 }

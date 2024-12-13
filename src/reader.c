@@ -4,7 +4,6 @@ pthread_mutex_t backup_mutex = PTHREAD_MUTEX_INITIALIZER;
 pthread_cond_t backup_cond   = PTHREAD_COND_INITIALIZER;
 size_t active_backups        = 0;
 
-
 /**
  * @brief Reads commands from an input file descriptor and executes them.
  *
@@ -97,8 +96,8 @@ void read_file(int in_fd, int out_fd, const char *job_path) {
       if (delay > 0) {
         const char wait_message[] = "Waiting...\n";
         if (write(out_fd, wait_message, strlen(wait_message)) != (ssize_t)strlen(wait_message)) {
-          fprintf(stderr, "Failed to write help to .out file\n");
-          // TODO ver o que fazer
+          fprintf(stderr, "Failed to write wait to .out file\n");
+          break;
         }
         kvs_wait(delay);
       }
@@ -114,37 +113,27 @@ void read_file(int in_fd, int out_fd, const char *job_path) {
       }
       active_backups++; // quando receber o sinal, incrementa o numero de backups ativos
       pthread_mutex_unlock(&backup_mutex);
-      // TODO memory leaks
-      int pid = fork();
+
+      pid_t pid = fork();
       if (pid < 0) { // error handling
         fprintf(stderr, "Failed to fork\n");
-
-        // locks the mutex to decrement the number of active backups and signal the condition variable
         pthread_mutex_lock(&backup_mutex);
         active_backups--;
         pthread_cond_signal(&backup_cond);
         pthread_mutex_unlock(&backup_mutex);
-
-      } else if (pid == 0) { // child process
-
-        printf("Backup %lu started\n", backup_count); // TODO remover
+        break;
+      } else if (pid == 0) { // Child process
         if (kvs_backup(job_path, backup_count)) {
-          fprintf(stderr, "Failed to perform backup.\n");
+          fprintf(stderr, "Failed to perform backup %zu\n", backup_count);
           _exit(1);
         }
-        // locks the mutex to decrement the number of active backups and signal the condition variable
-        pthread_mutex_lock(&backup_mutex);
-        active_backups--;
-        pthread_cond_signal(&backup_cond);
-        pthread_mutex_unlock(&backup_mutex);
-        printf("Backup %lu finished\n", backup_count); // TODO remover
-        // kvs_terminate(); // isto nao é preciso
-        _exit(0);
-      } else {
-        // wait(NULL);
         _exit(0);
       }
-      printf("next command outside\n"); // TODO remover
+      // Parent
+      pthread_mutex_lock(&backup_mutex);
+      active_backups--;
+      pthread_cond_signal(&backup_cond);
+      pthread_mutex_unlock(&backup_mutex);
       break;
 
     case CMD_INVALID:
@@ -154,7 +143,7 @@ void read_file(int in_fd, int out_fd, const char *job_path) {
     case CMD_HELP:
       if (write(out_fd, help, strlen(help)) != (ssize_t)strlen(help)) {
         fprintf(stderr, "Failed to write help to .out file\n");
-        // TODO ver o que fazer
+        break;
       }
 
       break;
