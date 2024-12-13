@@ -5,9 +5,30 @@ pthread_cond_t backup_cond   = PTHREAD_COND_INITIALIZER;
 size_t active_backups        = 0;
 
 
+/**
+ * @brief Reads commands from an input file descriptor and executes them.
+ *
+ * This function continuously reads commands from the input file descriptor `in_fd`,
+ * processes them, and performs the corresponding actions. The results or outputs
+ * are written to the output file descriptor `out_fd`. The function supports the
+ * following commands:
+ *
+ * - WRITE [(key,value)(key2,value2),...]: Writes key-value pairs to the key-value store.
+ * - READ [key,key2,...]: Reads values for the specified keys from the key-value store.
+ * - DELETE [key,key2,...]: Deletes the specified keys from the key-value store.
+ * - SHOW: Displays all key-value pairs in the key-value store.
+ * - WAIT <delay_ms>: Waits for the specified delay in milliseconds.
+ * - BACKUP: Creates a backup of the key-value store.
+ * - HELP: Displays the available commands and their usage.
+ *
+ * @param in_fd The input file descriptor to read commands from.
+ * @param out_fd The output file descriptor to write results or outputs to.
+ * @param job_path The path to the job file for backup operations.
+ */
 void read_file(int in_fd, int out_fd, const char *job_path) {
   size_t backup_count = 0;
 
+  // help command string
   const char help[] = "Available commands:\n"
                       "  WRITE [(key,value)(key2,value2),...]\n"
                       "  READ [key,key2,...]\n"
@@ -20,7 +41,7 @@ void read_file(int in_fd, int out_fd, const char *job_path) {
   while (1) {
     char keys[MAX_WRITE_SIZE][MAX_STRING_SIZE]   = { 0 };
     char values[MAX_WRITE_SIZE][MAX_STRING_SIZE] = { 0 };
-    unsigned int delay;
+    unsigned int delay; // delay in milliseconds
     size_t num_pairs;
 
     switch (get_next(in_fd)) {
@@ -86,20 +107,24 @@ void read_file(int in_fd, int out_fd, const char *job_path) {
     case CMD_BACKUP:
       backup_count++;
 
+      // lock de backup_mutex enquanto active_backups >= MAX_BACKUPS
       pthread_mutex_lock(&backup_mutex);
       while (active_backups >= MAX_BACKUPS) {
         pthread_cond_wait(&backup_cond, &backup_mutex);
       }
-      active_backups++;
+      active_backups++; // quando receber o sinal, incrementa o numero de backups ativos
       pthread_mutex_unlock(&backup_mutex);
       // TODO memory leaks
       int pid = fork();
       if (pid < 0) { // error handling
         fprintf(stderr, "Failed to fork\n");
+
+        // locks the mutex to decrement the number of active backups and signal the condition variable
         pthread_mutex_lock(&backup_mutex);
         active_backups--;
         pthread_cond_signal(&backup_cond);
         pthread_mutex_unlock(&backup_mutex);
+
       } else if (pid == 0) { // child process
 
         printf("Backup %lu started\n", backup_count); // TODO remover
@@ -107,6 +132,7 @@ void read_file(int in_fd, int out_fd, const char *job_path) {
           fprintf(stderr, "Failed to perform backup.\n");
           _exit(1);
         }
+        // locks the mutex to decrement the number of active backups and signal the condition variable
         pthread_mutex_lock(&backup_mutex);
         active_backups--;
         pthread_cond_signal(&backup_cond);
