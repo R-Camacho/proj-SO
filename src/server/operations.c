@@ -134,7 +134,7 @@ void kvs_show(int fd) {
 
 int kvs_backup(size_t num_backup, char *job_filename, char *directory) {
   pid_t pid;
-  char bck_name[50];
+  char bck_name[64];
   snprintf(bck_name, sizeof(bck_name), "%s/%s-%ld.bck", directory, strtok(job_filename, "."), num_backup);
 
   pthread_rwlock_rdlock(&kvs_table->tablelock);
