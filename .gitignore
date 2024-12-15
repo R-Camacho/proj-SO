@@ -56,5 +56,8 @@ dkms.conf
 # Output file
 kvs 
 
+# Backup files
+*.bck
+
 # Workspace settings
 .vscode
