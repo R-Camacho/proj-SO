@@ -1,6 +1,0 @@
-WRITE [(z,zanna)(l,lernardo)]
-WRITE [(m,minis)(n,narlota)]
-SHOW
-BACKUP
-WRITE [(m,minis)(n,narlota)]
-READ [a,b]

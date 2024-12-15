@@ -13,7 +13,7 @@ cleanup() {
 trap cleanup INT TERM
 
 # Move to the src directory and execute the commands
-cd src
+cd src/server
 make format ..
 
 make
@@ -23,5 +23,5 @@ make
 ./kvs $1 $2 $3
 
 
-cd ..
+cd ../..
 
