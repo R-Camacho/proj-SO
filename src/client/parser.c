@@ -15,7 +15,7 @@
 static int read_string(int fd, char *buffer, size_t max) {
   ssize_t bytes_read;
   char ch;
-  size_t i = 0;
+  size_t i  = 0;
   int value = -1;
 
   while (i < max) {
@@ -99,47 +99,47 @@ enum Command get_next(int fd) {
   }
 
   switch (buf[0]) {
-    case 'S':
-      if (read(fd, buf + 1, 9) != 9 || strncmp(buf, "SUBSCRIBE ", 10) != 0) {
-        cleanup(fd);
-        return CMD_INVALID;
-      }
-
-      return CMD_SUBSCRIBE;
-
-    case 'U':
-      if (read(fd, buf + 1, 11) != 11 || strncmp(buf, "UNSUBSCRIBE ", 12) != 0) {
-        cleanup(fd);
-        return CMD_INVALID;
-      }
-
-      return CMD_UNSUBSCRIBE;
-
-    case 'D':
-      if (read(fd, buf + 1, 5) != 5 || strncmp(buf, "DELAY ", 6) != 0) {
-        if (read(fd, buf + 6, 4) != 4 || strncmp(buf, "DISCONNECT", 10) != 0) {
-          cleanup(fd);
-          return CMD_INVALID;
-        }
-        if (read(fd, buf + 10, 1) != 0 && buf[10] != '\n') {
-          cleanup(fd);
-          return CMD_INVALID;
-        }
-        return CMD_DISCONNECT;
-      }
-
-      return CMD_DELAY;
-
-    case '#':
-      cleanup(fd);
-      return CMD_EMPTY;
-
-    case '\n':
-      return CMD_EMPTY;
-
-    default:
+  case 'S':
+    if (read(fd, buf + 1, 9) != 9 || strncmp(buf, "SUBSCRIBE ", 10) != 0) {
       cleanup(fd);
       return CMD_INVALID;
+    }
+
+    return CMD_SUBSCRIBE;
+
+  case 'U':
+    if (read(fd, buf + 1, 11) != 11 || strncmp(buf, "UNSUBSCRIBE ", 12) != 0) {
+      cleanup(fd);
+      return CMD_INVALID;
+    }
+
+    return CMD_UNSUBSCRIBE;
+
+  case 'D':
+    if (read(fd, buf + 1, 5) != 5 || strncmp(buf, "DELAY ", 6) != 0) {
+      if (read(fd, buf + 6, 4) != 4 || strncmp(buf, "DISCONNECT", 10) != 0) {
+        cleanup(fd);
+        return CMD_INVALID;
+      }
+      if (read(fd, buf + 10, 1) != 0 && buf[10] != '\n') {
+        cleanup(fd);
+        return CMD_INVALID;
+      }
+      return CMD_DISCONNECT;
+    }
+
+    return CMD_DELAY;
+
+  case '#':
+    cleanup(fd);
+    return CMD_EMPTY;
+
+  case '\n':
+    return CMD_EMPTY;
+
+  default:
+    cleanup(fd);
+    return CMD_INVALID;
   }
 }
 
@@ -152,7 +152,7 @@ size_t parse_list(int fd, char keys[][MAX_STRING_SIZE], size_t max_keys, size_t 
   }
 
   size_t num_keys = 0;
-  int output = 2;
+  int output      = 2;
   char key[max_string_size];
   while (num_keys < max_keys) {
     output = read_string(fd, key, max_string_size);

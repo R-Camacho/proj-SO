@@ -12,7 +12,7 @@ enum Command {
   CMD_DELAY,
   CMD_EMPTY,
   CMD_INVALID,
-  EOC  // End of commands
+  EOC // End of commands
 };
 
 // Parses input from the given file descriptor, according to
@@ -37,4 +37,4 @@ size_t parse_list(int fd, char keys[][MAX_STRING_SIZE], size_t max_keys, size_t 
 // @return 0 if no thread was specified, 1 if a thread was specified, -1 on error.
 int parse_delay(int fd, unsigned int *delay);
 
-#endif  // KVS_PARSER_H
+#endif // KVS_PARSER_H

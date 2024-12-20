@@ -24,4 +24,4 @@ int write_all(int fd, const void *buffer, size_t size);
 
 void delay(unsigned int time_ms);
 
-#endif  // COMMON_IO_H
+#endif // COMMON_IO_H
