@@ -54,7 +54,8 @@ Mkfile.old
 dkms.conf
 
 # Output file
-kvs 
+kvs
+client
 
 # Backup files
 *.bck
