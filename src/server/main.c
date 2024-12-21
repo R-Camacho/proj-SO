@@ -1,9 +1,11 @@
 #include <dirent.h>
+#include <errno.h>
 #include <fcntl.h>
 #include <limits.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <sys/stat.h>
 #include <sys/types.h>
 #include <sys/wait.h>
 #include <unistd.h>
@@ -158,7 +160,7 @@ static int run_job(int in_fd, int out_fd, char *filename) {
       break;
 
     case EOC:
-      printf("EOF\n");
+      printf("EOF\n"); // TODO tirar
       return 0;
     }
   }
@@ -231,7 +233,6 @@ static void *get_file(void *arguments) {
   pthread_exit(NULL);
 }
 
-
 static void dispatch_threads(DIR *dir) {
   pthread_t *threads = malloc(max_threads * sizeof(pthread_t));
 
@@ -252,7 +253,7 @@ static void dispatch_threads(DIR *dir) {
     }
   }
 
-  // ler do FIFO de registo
+  // TODO ler do FIFO de registo
 
   for (unsigned int i = 0; i < max_threads; i++) {
     if (pthread_join(threads[i], NULL) != 0) {
@@ -270,6 +271,19 @@ static void dispatch_threads(DIR *dir) {
   free(threads);
 }
 
+int create_register_pipe(const char *register_pipe_path) {
+  // Remove pipe if exists
+  if (unlink(register_pipe_path) < 0 && errno != ENOENT) {
+    fprintf(stderr, "Failed to remove old register pipe: %s\n", strerror(errno));
+    return 1;
+  }
+
+  if (mkfifo(register_pipe_path, 0640) < 0) { // TODO verificar se é 0640
+    fprintf(stderr, "Failed to create register pipe: %s\n", strerror(errno));
+    return 1;
+  }
+  return 0;
+}
 
 int main(int argc, char **argv) {
   if (argc < 4) {
@@ -277,7 +291,8 @@ int main(int argc, char **argv) {
     write_str(STDERR_FILENO, argv[0]);
     write_str(STDERR_FILENO, " <jobs_dir>");
     write_str(STDERR_FILENO, " <max_threads>");
-    write_str(STDERR_FILENO, " <max_backups> \n");
+    write_str(STDERR_FILENO, " <max_backups>");
+    write_str(STDERR_FILENO, " <register_pipe_path>\n");
     return 1;
   }
 
@@ -310,6 +325,11 @@ int main(int argc, char **argv) {
 
   if (kvs_init()) {
     write_str(STDERR_FILENO, "Failed to initialize KVS\n");
+    return 1;
+  }
+
+  char *register_pipe_path = argv[4]; // TODO talvez criar uma função init_server
+  if (create_register_pipe(register_pipe_path)) {
     return 1;
   }
 

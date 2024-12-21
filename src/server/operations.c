@@ -95,13 +95,15 @@ int kvs_delete(size_t num_pairs, char keys[][MAX_STRING_SIZE], int fd) {
 
   int aux = 0;
   for (size_t i = 0; i < num_pairs; i++) {
-    if (!aux) {
-      write_str(fd, "[");
-      aux = 1;
+    if (delete_pair(kvs_table, keys[i]) != 0) {
+      if (!aux) {
+        write_str(fd, "[");
+        aux = 1;
+      }
+      char str[MAX_STRING_SIZE];
+      snprintf(str, MAX_STRING_SIZE, "(%s,KVSMISSING)", keys[i]);
+      write_str(fd, str);
     }
-    char str[MAX_STRING_SIZE];
-    snprintf(str, MAX_STRING_SIZE, "(%s,KVSMISSING)", keys[i]);
-    write_str(fd, str);
   }
   if (aux) {
     write_str(fd, "]\n");
