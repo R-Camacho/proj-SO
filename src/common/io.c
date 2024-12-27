@@ -77,3 +77,29 @@ void delay(unsigned int time_ms) {
   struct timespec delay = delay_to_timespec(time_ms);
   nanosleep(&delay, NULL);
 }
+
+int open_pipe(const char *path, mode_t mode) {
+  // Remove pipe if exists
+  // TODO pode nao ser preciso
+  if (unlink(path) != 0 && errno != ENOENT) {
+    fprintf(stderr, "Failed to remove old register pipe: %s\n", strerror(errno));
+    return -1;
+  }
+
+  if (mkfifo(path, mode) != 0) {
+    fprintf(stderr, "Failed to open pipe: %s\n", strerror(errno));
+    return -1;
+  }
+
+  fprintf(stdout, "[INFO]: Pipe %s created\n", path); // TODO tirar isto
+  return 0;
+}
+
+int open_file(const char *path, int flags) {
+  int fd;
+  if ((fd = open(path, O_RDWR)) < 0) {
+    fprintf(stderr, "Failed to open %s: %s\n", path, strerror(errno));
+    return -1;
+  }
+  return fd;
+}

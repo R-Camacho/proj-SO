@@ -123,7 +123,7 @@ AllowShortFunctionsOnASingleLine: false
 
 # AllowShortIfStatementsOnASingleLine (bool)
 # If true, if (a) return; can be put on a single line.
-AllowShortIfStatementsOnASingleLine: false
+AllowShortIfStatementsOnASingleLine: true
 
 # AllowShortLoopsOnASingleLine (bool)
 # If true, while (true) continue; can be put on a single line.
