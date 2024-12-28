@@ -1,7 +1,11 @@
 #ifndef KVS_PARSER_H
 #define KVS_PARSER_H
 
+#include <limits.h>
 #include <stddef.h>
+#include <stdlib.h>
+#include <string.h>
+#include <unistd.h>
 
 #include "src/common/constants.h"
 

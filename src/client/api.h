@@ -1,7 +1,6 @@
 #ifndef CLIENT_API_H
 #define CLIENT_API_H
 
-#include "src/common/constants.h"
 #include <errno.h>
 #include <fcntl.h>
 #include <stddef.h>
@@ -9,6 +8,10 @@
 #include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
+
+#include "src/common/constants.h"
+#include "src/common/io.h"
+#include "src/common/protocol.h"
 
 /// Connects to a kvs server.
 /// @param req_pipe_path Path to the name pipe to be created for requests.

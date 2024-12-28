@@ -1,7 +1,5 @@
 #include "api.h"
-#include "src/common/constants.h"
-#include "src/common/io.h"
-#include "src/common/protocol.h"
+
 
 int req_pipe_fd;
 int resp_pipe_fd;

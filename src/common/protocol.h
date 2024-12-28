@@ -9,7 +9,7 @@ enum OpCode {
   OP_CODE_DISCONNECT,
   OP_CODE_SUBSCRIBE,
   OP_CODE_UNSUBSCRIBE,
-  // TODO mais opcodes para cada operacao
+  // TODO mais opcodes para cada operacao (acho que não é preciso)
 };
 
 #endif // COMMON_PROTOCOL_H

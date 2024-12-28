@@ -1,13 +1,4 @@
 #include "io.h"
-#include "src/common/constants.h"
-#include <errno.h>
-#include <limits.h>
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
-#include <time.h>
-#include <unistd.h>
-
 
 int read_all(int fd, void *buffer, size_t size, int *intr) {
   if (intr != NULL && *intr) {
@@ -97,7 +88,7 @@ int open_pipe(const char *path, mode_t mode) {
 
 int open_file(const char *path, int flags) {
   int fd;
-  if ((fd = open(path, O_RDWR)) < 0) {
+  if ((fd = open(path, flags)) < 0) {
     fprintf(stderr, "Failed to open %s: %s\n", path, strerror(errno));
     return -1;
   }

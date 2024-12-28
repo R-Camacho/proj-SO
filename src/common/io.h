@@ -1,10 +1,19 @@
 #ifndef COMMON_IO_H
 #define COMMON_IO_H
 
+#include <errno.h>
 #include <fcntl.h>
+#include <limits.h>
 #include <stddef.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
 #include <sys/stat.h>
 #include <sys/types.h>
+#include <time.h>
+#include <unistd.h>
+
+#include "src/common/constants.h"
 
 /// Reads a given number of bytes from a file descriptor. Will block until all
 /// bytes are read, or fail if not all bytes could be read.

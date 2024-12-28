@@ -1,8 +1,5 @@
 #include "kvs.h"
-#include "string.h"
-#include <ctype.h>
 
-#include <stdlib.h>
 
 // Hash function based on key initial.
 // @param key Lowercase alphabetical string.

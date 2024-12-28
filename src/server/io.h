@@ -1,6 +1,10 @@
 #ifndef KVS_IO_H
 #define KVS_IO_H
 
+#include <limits.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
 #include <unistd.h>
 
 /// Writes a string to the given file descriptor.
