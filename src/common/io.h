@@ -24,6 +24,11 @@
 /// @return On success, returns 1, on end of file, returns 0, on error, returns -1
 int read_all(int fd, void *buffer, size_t size, int *intr);
 
+/// Reads a string from a file descriptor. Maximum string size is defined by
+/// MAX_STRING_SIZE. Will fail if the string is too long.
+/// @param fd File descriptor to read from.
+/// @param str Buffer to read into.
+/// @return On success, returns the number of bytes read, on error, returns -1
 int read_string(int fd, char *str);
 
 /// Writes a given number of bytes to a file descriptor. Will block until all
@@ -34,7 +39,19 @@ int read_string(int fd, char *str);
 /// @return On success, returns 1, on error, returns -1
 int write_all(int fd, const void *buffer, size_t size);
 
+/// Converts a delay in milliseconds to a timespec struct.
+/// @param delay_ms Delay in milliseconds.
+/// @return Timespec struct representing the delay.
+static struct timespec delay_to_timespec(unsigned int delay_ms);
+
+/// Sleeps for a given amount of time in milliseconds.
+/// @param time_ms Time to sleep in milliseconds.
 void delay(unsigned int time_ms);
+
+/// Unlinks a pipe with a given path.
+/// @param pathname Path to the pipe.
+/// @return On success, returns 0, on error, returns -1
+int unlink_pipe(const char *pathname);
 
 /// Opens a pipe with a given path and mode.
 /// @param path Path to the pipe.
@@ -47,5 +64,10 @@ int open_pipe(const char *path, mode_t mode);
 /// @param flags Flags to open the file with.
 /// @return On success, returns the file descriptor, on error, returns -1
 int open_file(const char *path, int flags);
+
+/// Closes a file descriptor.
+/// @param fd File descriptor to close.
+/// @return On success, returns 0, on error, returns -1
+int close_file(int fd);
 
 #endif // COMMON_IO_H

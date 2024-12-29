@@ -69,6 +69,14 @@ void delay(unsigned int time_ms) {
   nanosleep(&delay, NULL);
 }
 
+int unlink_pipe(const char *pathname) {
+  if (unlink(pathname) != 0 && errno != ENOENT) {
+    fprintf(stderr, "Failed to unlink %s: %s\n", pathname, strerror(errno));
+    return -1;
+  }
+  return 0;
+}
+
 int open_pipe(const char *path, mode_t mode) {
   // Remove pipe if exists
   // TODO pode nao ser preciso
@@ -93,4 +101,12 @@ int open_file(const char *path, int flags) {
     return -1;
   }
   return fd;
+}
+
+int close_file(int fd) {
+  if (close(fd) != 0) {
+    fprintf(stderr, "Failed to close: %s\n", strerror(errno));
+    return -1;
+  }
+  return 0;
 }

@@ -10,7 +10,7 @@ const char *notif_pipe_p;
 int session_id;
 
 int kvs_connect(char const *req_pipe_path, char const *resp_pipe_path, char const *server_pipe_path, char const *notif_pipe_path, int *notif_pipe) {
-  // TODO create pipes and connect
+  // TODO create pipes and connect; Falta ver o notif pipe
   req_pipe_p   = req_pipe_path;
   resp_pipe_p  = resp_pipe_path;
   notif_pipe_p = notif_pipe_path;
@@ -44,7 +44,7 @@ int kvs_connect(char const *req_pipe_path, char const *resp_pipe_path, char cons
   if (req_pipe_fd == -1 || resp_pipe_fd == -1 || notif_pipe_fd == -1) return 1;
 
   // TODO se calhar ler a resposta de maneira diferente
-  char *response = (char *)malloc((2 + 1) * sizeof(char));
+  char response[2] = { 0 };
   if (read_string(resp_pipe_fd, response) != 2) {
     fprintf(stderr, "Failed to read response from server\n");
     return 1;
@@ -57,7 +57,27 @@ int kvs_connect(char const *req_pipe_path, char const *resp_pipe_path, char cons
 }
 
 int kvs_disconnect(void) {
-  // close pipes and unlink pipe files
+  // TODO close pipes and unlink pipe files
+  char msg = OP_CODE_DISCONNECT;
+  if (write_all(req_pipe_fd, &msg, 1) == -1) return 1;
+
+  if (close_file(req_pipe_fd) == -1) return 1;
+  if (close_file(resp_pipe_fd) == -1) return 1;
+  if (close_file(notif_pipe_fd) == -1) return 1;
+
+  if (unlink_pipe(req_pipe_p) == -1) return 1;
+  if (unlink_pipe(resp_pipe_p) == -1) return 1;
+  if (unlink_pipe(notif_pipe_p) == -1) return 1;
+
+  // TODO se calhar ler a resposta de maneira diferente
+  char response[2] = { 0 };
+  if (read_string(resp_pipe_fd, response) != 2) {
+    fprintf(stderr, "Failed to read response from server\n");
+    return 1;
+  }
+
+  // TODO se calhar printar noutro sitio???
+  fprintf(stdout, "Server returned %d for operation: disconnect\n", response[1]);
   return 0;
 }
 
