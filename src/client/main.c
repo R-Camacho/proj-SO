@@ -10,6 +10,25 @@
 #include "src/common/constants.h"
 #include "src/common/io.h"
 
+void *notifications_thread(void *arg) {
+  // Continuously read from notif_pipe_fd and handle notifications
+  int notif_pipe_fd = *(int *)arg;
+  int intr          = 0;
+  // (<chave>,<valor>)
+  char buffer[1 + MAX_STRING_SIZE + 1 + 1 + MAX_WRITE_SIZE + 1 + 1] = { 0 };
+
+  while (1) {
+    // while loop to read all bytes and never stop
+    if (read_all(notif_pipe_fd, buffer, sizeof(buffer), &intr) == -1 || intr) {
+      fprintf(stderr, "Failed to read notification from server\n");
+      return NULL;
+    }
+    fprintf(stdout, "Notification received: %s\n", buffer);
+  }
+
+  return NULL;
+}
+
 
 int main(int argc, char *argv[]) {
   if (argc < 3) {
@@ -30,12 +49,18 @@ int main(int argc, char *argv[]) {
   strncat(notif_pipe_path, argv[1], strlen(argv[1]) * sizeof(char));
 
   // TODO open pipes; Verificar se ali é NULL
-  if (kvs_connect(req_pipe_path, resp_pipe_path, argv[2], notif_pipe_path, NULL) != 0) {
+  int notif_pipe_fd;
+  if (kvs_connect(req_pipe_path, resp_pipe_path, argv[2], notif_pipe_path, notif_pipe_fd) != 0) {
     fprintf(stderr, "Failed to connect to the server\n");
     return 1;
   }
 
   // TODO: start notifications thread
+  pthread_t notif_thread;
+  if (pthread_create(&notif_thread, NULL, notifications_thread, &notif_pipe_fd) != 0) {
+    fprintf(stderr, "Failed to create notifications thread\n");
+    return 1;
+  }
 
   while (1) {
     switch (get_next(STDIN_FILENO)) {

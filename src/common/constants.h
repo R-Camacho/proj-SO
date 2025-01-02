@@ -6,6 +6,11 @@
 #define STATE_ACCESS_DELAY_US   // delay a aplicar no server
 #define MAX_PIPE_PATH_LENGTH 40 // tamanho max do caminho do pipe
 #define MAX_STRING_SIZE 40
+
+#ifndef MAX_WRITE_SIZE
+#define MAX_WRITE_SIZE 256
+#endif
+
 #define MAX_NUMBER_SUB 10
 
 #define PIPE_PERMISSIONS 0640 // permissoes dos pipes

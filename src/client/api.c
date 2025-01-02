@@ -40,6 +40,7 @@ int kvs_connect(char const *req_pipe_path, char const *resp_pipe_path, char cons
   req_pipe_fd   = open_file(req_pipe_path, O_WRONLY);
   resp_pipe_fd  = open_file(resp_pipe_path, O_RDONLY);
   notif_pipe_fd = open_file(notif_pipe_path, O_RDONLY);
+  *notif_pipe   = notif_pipe_fd;
 
   if (req_pipe_fd == -1 || resp_pipe_fd == -1 || notif_pipe_fd == -1) return 1;
 
@@ -83,10 +84,39 @@ int kvs_disconnect(void) {
 
 int kvs_subscribe(const char *key) {
   // send subscribe message to request pipe and wait for response in response pipe
+  char msg[1 + MAX_STRING_SIZE + 1] = { 0 };
+
+  msg[0] = OP_CODE_SUBSCRIBE;
+  strncpy(msg + 1, key, MAX_STRING_SIZE);
+  if (write_all(req_pipe_fd, msg, 1 + MAX_STRING_SIZE + 1) == -1) return 1;
+
+  char response[2] = { 0 };
+  if (read_string(resp_pipe_fd, response) != 2) {
+    fprintf(stderr, "Failed to read response from server\n");
+    return 1;
+  }
+
+  // TODO se calhar printar noutro sitio???
+  fprintf(stdout, "Server returned %d for operation: subscribe\n", response[1]);
+
   return 0;
 }
 
 int kvs_unsubscribe(const char *key) {
   // send unsubscribe message to request pipe and wait for response in response pipe
+  char msg[1 + MAX_STRING_SIZE + 1] = { 0 };
+
+  msg[0] = OP_CODE_UNSUBSCRIBE;
+  strncpy(msg + 1, key, MAX_STRING_SIZE);
+  if (write_all(req_pipe_fd, msg, 1 + MAX_STRING_SIZE + 1) == -1) return 1;
+
+  char response[2] = { 0 };
+  if (read_string(resp_pipe_fd, response) != 2) {
+    fprintf(stderr, "Failed to read response from server\n");
+    return 1;
+  }
+
+  // TODO se calhar printar noutro sitio???
+  fprintf(stdout, "Server returned %d for operation: unsubscribe\n", response[1]);
   return 0;
 }
