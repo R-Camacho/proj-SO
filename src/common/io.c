@@ -95,11 +95,12 @@ int open_pipe(const char *path, mode_t mode) {
 }
 
 int open_file(const char *path, int flags) {
-  int fd;
-  if ((fd = open(path, flags)) < 0) {
+  int fd = open(path, flags);
+  if (fd < 0) {
     fprintf(stderr, "Failed to open %s: %s\n", path, strerror(errno));
     return -1;
   }
+  printf("[INFO]: File %s opened\n", path); // TODO tirar isto
   return fd;
 }
 

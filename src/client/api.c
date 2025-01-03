@@ -25,7 +25,7 @@ int kvs_connect(char const *req_pipe_path, char const *resp_pipe_path, char cons
   if (open_pipe(notif_pipe_path, PIPE_PERMISSIONS) == -1) return 1;
 
   int server_fd;
-  if ((server_fd = open_file(server_pipe_path, O_WRONLY)) == -1) return 1;
+  if ((server_fd = open_file(server_pipe_path, O_WRONLY | O_NONBLOCK)) == -1) return 1;
 
   char msg[1 + 3 * MAX_PIPE_PATH_LENGTH] = { 0 };
 
@@ -34,22 +34,31 @@ int kvs_connect(char const *req_pipe_path, char const *resp_pipe_path, char cons
   strncpy(msg + 1 + MAX_PIPE_PATH_LENGTH, resp_pipe_path, MAX_PIPE_PATH_LENGTH);
   strncpy(msg + 1 + 2 * MAX_PIPE_PATH_LENGTH, notif_pipe_path, MAX_PIPE_PATH_LENGTH);
 
-  write_all(server_fd, msg, 1 + 3 * MAX_PIPE_PATH_LENGTH);
-  close(server_fd);
 
-  req_pipe_fd   = open_file(req_pipe_path, O_WRONLY);
-  resp_pipe_fd  = open_file(resp_pipe_path, O_RDONLY);
-  notif_pipe_fd = open_file(notif_pipe_path, O_RDONLY);
-  *notif_pipe   = notif_pipe_fd;
+  puts("0");
+  if (write_all(server_fd, msg, 1 + 3 * MAX_PIPE_PATH_LENGTH) == -1 || close_file(server_fd) == -1) return 1;
 
-  if (req_pipe_fd == -1 || resp_pipe_fd == -1 || notif_pipe_fd == -1) return 1;
+  puts("1");
+  req_pipe_fd = open_file(req_pipe_path, O_WRONLY | O_NONBLOCK);
+  puts("2");
+  resp_pipe_fd = open_file(resp_pipe_path, O_RDONLY | O_NONBLOCK);
+  puts("3");
+  notif_pipe_fd = open_file(notif_pipe_path, O_RDONLY | O_NONBLOCK);
+  puts("4");
+  *notif_pipe = notif_pipe_fd;
+
+
+  // TODO debug tirar comments
+  // if (req_pipe_fd == -1 || resp_pipe_fd == -1 || notif_pipe_fd == -1) return 1;
+
+  printf("req_pipe_fd: %d\n", req_pipe_fd);
 
   // TODO se calhar ler a resposta de maneira diferente
   char response[2] = { 0 };
-  if (read_string(resp_pipe_fd, response) != 2) {
-    fprintf(stderr, "Failed to read response from server\n");
-    return 1;
-  }
+  // if (read_string(resp_pipe_fd, response) != 2) {
+  //   fprintf(stderr, "Failed to read response from server\n");
+  //   return 1;
+  // }
 
   // TODO se calhar printar noutro sitio???
   fprintf(stdout, "Server returned %d for operation: connect\n", response[1]);
