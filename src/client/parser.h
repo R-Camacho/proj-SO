@@ -9,6 +9,8 @@
 
 #include "src/common/constants.h"
 
+#define NOTIFICATION_SIZE (1 + MAX_STRING_SIZE + 1 + 1 + MAX_WRITE_SIZE + 1 + 1 + 1)
+
 enum Command {
   CMD_DISCONNECT,
   CMD_SUBSCRIBE,
@@ -40,5 +42,6 @@ size_t parse_list(int fd, char keys[][MAX_STRING_SIZE], size_t max_keys, size_t 
 // @param thread_id Pointer to the variable to store the thread ID in. May not be set.
 // @return 0 if no thread was specified, 1 if a thread was specified, -1 on error.
 int parse_delay(int fd, unsigned int *delay);
+
 
 #endif // KVS_PARSER_H

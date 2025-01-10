@@ -69,9 +69,9 @@ void delay(unsigned int time_ms) {
   nanosleep(&delay, NULL);
 }
 
-int unlink_pipe(const char *pathname) {
-  if (unlink(pathname) != 0 && errno != ENOENT) {
-    fprintf(stderr, "Failed to unlink %s: %s\n", pathname, strerror(errno));
+int unlink_pipe(const char *path) {
+  if (unlink(path) != 0 && errno != ENOENT) {
+    fprintf(stderr, "Failed to unlink %s: %s\n", path, strerror(errno));
     return -1;
   }
   return 0;
@@ -80,8 +80,7 @@ int unlink_pipe(const char *pathname) {
 int open_pipe(const char *path, mode_t mode) {
   // Remove pipe if exists
   // TODO pode nao ser preciso
-  if (unlink(path) != 0 && errno != ENOENT) {
-    fprintf(stderr, "Failed to remove old register pipe: %s\n", strerror(errno));
+  if (unlink_pipe(path) != 0) {
     return -1;
   }
 

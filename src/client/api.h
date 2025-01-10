@@ -34,4 +34,8 @@ int kvs_subscribe(const char *key);
 /// @return 0 if the key was unsubscribed successfully  (subscription existed and was removed), 1 otherwise.
 int kvs_unsubscribe(const char *key);
 
+/// Reads and prints a response from the server.
+/// @param operation Operation that was performed.
+void read_response(char *operation);
+
 #endif // CLIENT_API_H

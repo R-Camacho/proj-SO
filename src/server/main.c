@@ -16,6 +16,7 @@
 #include "parser.h"
 #include "pthread.h"
 #include "src/common/constants.h"
+#include "src/common/io.h"
 
 struct SharedData {
   DIR *dir;
@@ -272,21 +273,6 @@ static void dispatch_threads(DIR *dir) {
   free(threads);
 }
 
-int create_register_pipe(const char *register_pipe_path) {
-  // Remove pipe if exists
-  // TODO pode nao ser preciso
-  if (unlink(register_pipe_path) < 0 && errno != ENOENT) {
-    fprintf(stderr, "Failed to remove old register pipe: %s\n", strerror(errno));
-    return 1;
-  }
-
-  if (mkfifo(register_pipe_path, PIPE_PERMISSIONS) < 0) { // TODO verificar se é 0640
-    fprintf(stderr, "Failed to create register pipe: %s\n", strerror(errno));
-    return 1;
-  }
-  return 0; // TODO fechar o pipe
-}
-
 int main(int argc, char **argv) {
   if (argc < 4) {
     write_str(STDERR_FILENO, "Usage: ");
@@ -331,7 +317,7 @@ int main(int argc, char **argv) {
   }
 
   char *register_pipe_path = argv[4]; // TODO talvez criar uma função init_server
-  if (create_register_pipe(register_pipe_path)) {
+  if (open_pipe(register_pipe_path, PIPE_PERMISSIONS) == -1) {
     return 1;
   }
 

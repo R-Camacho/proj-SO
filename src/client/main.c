@@ -15,29 +15,40 @@ void *notifications_thread(void *arg) {
   int notif_pipe_fd = *(int *)arg;
   int intr          = 0;
   // (<chave>,<valor>)
-  char buffer[1 + MAX_STRING_SIZE + 1 + 1 + MAX_WRITE_SIZE + 1 + 1] = { 0 };
+  char buffer[NOTIFICATION_SIZE] = { 0 };
 
-  printf("Notification thread started\n"); // TODO tirar
+  write_all(STDOUT_FILENO, "Notifications thread started\n", 30); // TODO tirar
 
-  // test buffer
-  // buffer[0] = '(';
-  // strcpy(buffer + 1, "chave");
-  // strcat(buffer, ",valor)");
-  // printf("Notification received: %s\n", buffer);
-
-  if (read_all(notif_pipe_fd, buffer, sizeof(buffer), &intr) == -1 || intr) {
-    fprintf(stderr, "Failed to read notification from server\n");
-    return NULL;
-  }
-  fprintf(stdout, "Notification received: %s\n", buffer);
-  return NULL;
   while (1) {
+    // clear buffer
+    memset(buffer, 0, sizeof(buffer));
+
     // read notification
-    if (read_all(notif_pipe_fd, buffer, sizeof(buffer), &intr) == -1 || intr) {
-      fprintf(stderr, "Failed to read notification from server\n");
-      return NULL;
+    ssize_t bytes_read = read_all(notif_pipe_fd, buffer, sizeof(buffer), &intr);
+    if (bytes_read == -1) {
+      if (errno == EAGAIN || errno == EWOULDBLOCK) {
+        // No data to read
+        continue;
+      }
+      if (intr) {
+        fprintf(stderr, "Read interrupted\n");
+        break;
+      }
+      // Other error occurred
+      fprintf(stderr, "Failed to read from notification pipe: %s\n", strerror(errno));
+      continue;
     }
-    fprintf(stdout, "Notification received: %s\n", buffer);
+
+    if (bytes_read == 0) {
+      continue;
+    }
+
+    size_t len = strlen(buffer);
+    printf("len: %ld\n", len); // TODO tirar
+    if (len == 0) continue;    // this may never happen
+
+    write_all(STDOUT_FILENO, buffer, strlen(buffer));
+    write_all(STDOUT_FILENO, "\n", 1);
   }
 
   return NULL;
@@ -62,16 +73,12 @@ int main(int argc, char *argv[]) {
   strncat(resp_pipe_path, argv[1], strlen(argv[1]) * sizeof(char));
   strncat(notif_pipe_path, argv[1], strlen(argv[1]) * sizeof(char));
 
-  printf("inicio\n");
-
   // TODO open pipes;
   int notif_pipe_fd;
   if (kvs_connect(req_pipe_path, resp_pipe_path, argv[2], notif_pipe_path, &notif_pipe_fd) != 0) {
     fprintf(stderr, "Failed to connect to the server\n");
     return 1;
   }
-
-  printf("Notification thread starteddasdasdasdasd\n");
 
   // TODO: start notifications thread
   pthread_t notif_thread;
@@ -83,11 +90,13 @@ int main(int argc, char *argv[]) {
   while (1) {
     switch (get_next(STDIN_FILENO)) {
     case CMD_DISCONNECT:
+      // TODO: end notifications thread
+      pthread_cancel(notif_thread); // read_all is the cancellation point
+      pthread_join(notif_thread, NULL);
       if (kvs_disconnect() != 0) {
         fprintf(stderr, "Failed to disconnect to the server\n");
         return 1;
       }
-      // TODO: end notifications thread
       printf("Disconnected from server\n");
       return 0;
 

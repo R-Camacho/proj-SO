@@ -25,44 +25,29 @@ int kvs_connect(char const *req_pipe_path, char const *resp_pipe_path, char cons
   if (open_pipe(notif_pipe_path, PIPE_PERMISSIONS) == -1) return 1;
 
   int server_fd;
-  if ((server_fd = open_file(server_pipe_path, O_WRONLY | O_NONBLOCK)) == -1) return 1;
+  if ((server_fd = open(server_pipe_path, O_WRONLY)) == -1) return 1;
 
   char msg[1 + 3 * MAX_PIPE_PATH_LENGTH] = { 0 };
-
-  msg[0] = OP_CODE_CONNECT;
+  msg[0]                                 = OP_CODE_CONNECT;
   strncpy(msg + 1, req_pipe_path, MAX_PIPE_PATH_LENGTH);
   strncpy(msg + 1 + MAX_PIPE_PATH_LENGTH, resp_pipe_path, MAX_PIPE_PATH_LENGTH);
   strncpy(msg + 1 + 2 * MAX_PIPE_PATH_LENGTH, notif_pipe_path, MAX_PIPE_PATH_LENGTH);
 
-
-  puts("0");
   if (write_all(server_fd, msg, 1 + 3 * MAX_PIPE_PATH_LENGTH) == -1 || close_file(server_fd) == -1) return 1;
 
   puts("1");
-  req_pipe_fd = open_file(req_pipe_path, O_WRONLY | O_NONBLOCK);
+  req_pipe_fd = open_file(req_pipe_path, O_WRONLY);
   puts("2");
-  resp_pipe_fd = open_file(resp_pipe_path, O_RDONLY | O_NONBLOCK);
+  resp_pipe_fd = open_file(resp_pipe_path, O_RDONLY);
   puts("3");
-  notif_pipe_fd = open_file(notif_pipe_path, O_RDONLY | O_NONBLOCK);
+  notif_pipe_fd = open_file(notif_pipe_path, O_RDONLY);
   puts("4");
   *notif_pipe = notif_pipe_fd;
 
-
   // TODO debug tirar comments
-  // if (req_pipe_fd == -1 || resp_pipe_fd == -1 || notif_pipe_fd == -1) return 1;
+  if (req_pipe_fd == -1 || resp_pipe_fd == -1 || notif_pipe_fd == -1) return 1;
 
-  printf("req_pipe_fd: %d\n", req_pipe_fd);
-
-  // TODO se calhar ler a resposta de maneira diferente
-  char response[2] = { 0 };
-  // if (read_string(resp_pipe_fd, response) != 2) {
-  //   fprintf(stderr, "Failed to read response from server\n");
-  //   return 1;
-  // }
-
-  // TODO se calhar printar noutro sitio???
-  fprintf(stdout, "Server returned %d for operation: connect\n", response[1]);
-
+  read_response("connect");
   return 0;
 }
 
@@ -72,22 +57,14 @@ int kvs_disconnect(void) {
   if (write_all(req_pipe_fd, &msg, 1) == -1) return 1;
 
   if (close_file(req_pipe_fd) == -1) return 1;
-  if (close_file(resp_pipe_fd) == -1) return 1;
   if (close_file(notif_pipe_fd) == -1) return 1;
 
   if (unlink_pipe(req_pipe_p) == -1) return 1;
-  if (unlink_pipe(resp_pipe_p) == -1) return 1;
   if (unlink_pipe(notif_pipe_p) == -1) return 1;
 
-  // TODO se calhar ler a resposta de maneira diferente
-  char response[2] = { 0 };
-  if (read_string(resp_pipe_fd, response) != 2) {
-    fprintf(stderr, "Failed to read response from server\n");
-    return 1;
-  }
-
-  // TODO se calhar printar noutro sitio???
-  fprintf(stdout, "Server returned %d for operation: disconnect\n", response[1]);
+  read_response("disconnect");
+  if (close_file(resp_pipe_fd) == -1) return 1;
+  if (unlink_pipe(resp_pipe_p) == -1) return 1;
   return 0;
 }
 
@@ -99,15 +76,7 @@ int kvs_subscribe(const char *key) {
   strncpy(msg + 1, key, MAX_STRING_SIZE);
   if (write_all(req_pipe_fd, msg, 1 + MAX_STRING_SIZE + 1) == -1) return 1;
 
-  char response[2] = { 0 };
-  if (read_string(resp_pipe_fd, response) != 2) {
-    fprintf(stderr, "Failed to read response from server\n");
-    return 1;
-  }
-
-  // TODO se calhar printar noutro sitio???
-  fprintf(stdout, "Server returned %d for operation: subscribe\n", response[1]);
-
+  read_response("subscribe");
   return 0;
 }
 
@@ -119,13 +88,36 @@ int kvs_unsubscribe(const char *key) {
   strncpy(msg + 1, key, MAX_STRING_SIZE);
   if (write_all(req_pipe_fd, msg, 1 + MAX_STRING_SIZE + 1) == -1) return 1;
 
+  read_response("unsubscribe");
+  return 0;
+}
+
+void read_response(char *operation) {
   char response[2] = { 0 };
-  if (read_string(resp_pipe_fd, response) != 2) {
-    fprintf(stderr, "Failed to read response from server\n");
-    return 1;
+  int intr         = 0;
+  while (1) {
+    ssize_t bytes_read = read_all(resp_pipe_fd, response, sizeof(response), &intr);
+    printf("bytes_read: %ld\n", bytes_read); // TODO tirar
+    if (bytes_read == -1) {
+      if (errno == EAGAIN || errno == EWOULDBLOCK) {
+        // No data to read
+        continue;
+      }
+      if (intr) {
+        // Thread was cancelled
+        fprintf(stderr, "Read interrupted\n");
+        return;
+      }
+      // Other error occurred
+      fprintf(stderr, "Failed to read from response pipe: %s\n", strerror(errno));
+      continue;
+    }
+
+    if (bytes_read == 0) {
+      continue;
+    }
+    break;
   }
 
-  // TODO se calhar printar noutro sitio???
-  fprintf(stdout, "Server returned %d for operation: unsubscribe\n", response[1]);
-  return 0;
+  fprintf(stdout, "Server returned %c for operation: %s\n", response[1], operation);
 }
