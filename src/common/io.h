@@ -57,7 +57,7 @@ int unlink_pipe(const char *pathname);
 /// @param path Path to the pipe.
 /// @param mode Mode to open the pipe with.
 /// @return On success, returns 0, on error, returns -1
-int open_pipe(const char *path, mode_t mode);
+int create_pipe(const char *path, mode_t mode);
 
 /// Opens a file with a given path and flags.
 /// @param path Path to the file.

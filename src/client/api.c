@@ -18,33 +18,31 @@ int kvs_connect(char const *req_pipe_path, char const *resp_pipe_path, char cons
   printf("req_pipe_p: %s\n", req_pipe_p);
   printf("resp_pipe_p: %s\n", resp_pipe_p);
 
-  if (open_pipe(req_pipe_path, PIPE_PERMISSIONS) == -1) return 1;
+  if (create_pipe(req_pipe_path, PIPE_PERMISSIONS) == -1) return 1;
 
-  if (open_pipe(resp_pipe_path, PIPE_PERMISSIONS) == -1) return 1;
+  if (create_pipe(resp_pipe_path, PIPE_PERMISSIONS) == -1) return 1;
 
-  if (open_pipe(notif_pipe_path, PIPE_PERMISSIONS) == -1) return 1;
+  if (create_pipe(notif_pipe_path, PIPE_PERMISSIONS) == -1) return 1;
 
   int server_fd;
   if ((server_fd = open(server_pipe_path, O_WRONLY)) == -1) return 1;
 
   char msg[1 + 3 * MAX_PIPE_PATH_LENGTH] = { 0 };
-  msg[0]                                 = OP_CODE_CONNECT;
+
+  msg[0] = OP_CODE_CONNECT;
   strncpy(msg + 1, req_pipe_path, MAX_PIPE_PATH_LENGTH);
   strncpy(msg + 1 + MAX_PIPE_PATH_LENGTH, resp_pipe_path, MAX_PIPE_PATH_LENGTH);
   strncpy(msg + 1 + 2 * MAX_PIPE_PATH_LENGTH, notif_pipe_path, MAX_PIPE_PATH_LENGTH);
 
   if (write_all(server_fd, msg, 1 + 3 * MAX_PIPE_PATH_LENGTH) == -1 || close_file(server_fd) == -1) return 1;
 
-  puts("1");
-  req_pipe_fd = open_file(req_pipe_path, O_WRONLY);
-  puts("2");
-  resp_pipe_fd = open_file(resp_pipe_path, O_RDONLY);
-  puts("3");
+
+  req_pipe_fd   = open_file(req_pipe_path, O_WRONLY);
+  resp_pipe_fd  = open_file(resp_pipe_path, O_RDONLY);
   notif_pipe_fd = open_file(notif_pipe_path, O_RDONLY);
-  puts("4");
+
   *notif_pipe = notif_pipe_fd;
 
-  // TODO debug tirar comments
   if (req_pipe_fd == -1 || resp_pipe_fd == -1 || notif_pipe_fd == -1) return 1;
 
   read_response("connect");
@@ -97,7 +95,6 @@ void read_response(char *operation) {
   int intr         = 0;
   while (1) {
     ssize_t bytes_read = read_all(resp_pipe_fd, response, sizeof(response), &intr);
-    printf("bytes_read: %ld\n", bytes_read); // TODO tirar
     if (bytes_read == -1) {
       if (errno == EAGAIN || errno == EWOULDBLOCK) {
         // No data to read

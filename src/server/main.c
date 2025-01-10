@@ -317,7 +317,7 @@ int main(int argc, char **argv) {
   }
 
   char *register_pipe_path = argv[4]; // TODO talvez criar uma função init_server
-  if (open_pipe(register_pipe_path, PIPE_PERMISSIONS) == -1) {
+  if (create_pipe(register_pipe_path, PIPE_PERMISSIONS) == -1) {
     return 1;
   }
 
