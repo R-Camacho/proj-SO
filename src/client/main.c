@@ -17,8 +17,6 @@ void *notifications_thread(void *arg) {
   // (<chave>,<valor>)
   char buffer[NOTIFICATION_SIZE] = { 0 };
 
-  write_all(STDOUT_FILENO, "Notifications thread started\n", 30); // TODO tirar
-
   while (1) {
     // clear buffer
     memset(buffer, 0, sizeof(buffer));
@@ -44,8 +42,7 @@ void *notifications_thread(void *arg) {
     }
 
     size_t len = strlen(buffer);
-    printf("len: %ld\n", len); // TODO tirar
-    if (len == 0) continue;    // this may never happen
+    if (len == 0) continue; // this may never happen
 
     write_all(STDOUT_FILENO, buffer, strlen(buffer));
     write_all(STDOUT_FILENO, "\n", 1);

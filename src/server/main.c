@@ -10,6 +10,7 @@
 #include <sys/wait.h>
 #include <unistd.h>
 
+#include "clients.h"
 #include "constants.h"
 #include "io.h"
 #include "operations.h"
@@ -235,7 +236,7 @@ static void *get_file(void *arguments) {
   pthread_exit(NULL);
 }
 
-static void dispatch_threads(DIR *dir) {
+static void dispatch_threads(DIR *dir, char *register_pipe_path) {
   pthread_t *threads = malloc(max_threads * sizeof(pthread_t));
 
   if (threads == NULL) {
@@ -255,15 +256,55 @@ static void dispatch_threads(DIR *dir) {
     }
   }
 
+  // Create client threads
+  pthread_t *client_threads = malloc(MAX_SESSION_COUNT * sizeof(pthread_t));
+  for (size_t i = 0; i < MAX_SESSION_COUNT; i++) {
+    if (pthread_create(&client_threads[i], NULL, client_thread, &i) != 0) {
+      fprintf(stderr, "Failed to create request thread %zu\n", i);
+      pthread_mutex_destroy(&thread_data.directory_mutex);
+      free(threads);
+      free(client_threads);
+      return;
+    }
+  }
+
   // TODO ler do FIFO de registo
+  pthread_t register_thread;
+  if (pthread_create(&register_thread, NULL, read_register, register_pipe_path) != 0) {
+    fprintf(stderr, "Failed to create register thread\n");
+    pthread_mutex_destroy(&thread_data.directory_mutex);
+    free(threads);
+    free(client_threads);
+    return;
+  }
 
   for (unsigned int i = 0; i < max_threads; i++) {
     if (pthread_join(threads[i], NULL) != 0) {
       fprintf(stderr, "Failed to join thread %u\n", i);
       pthread_mutex_destroy(&thread_data.directory_mutex);
       free(threads);
+      free(client_threads);
       return;
     }
+  }
+
+  for (size_t i = 0; i < MAX_SESSION_COUNT; i++) {
+    if (pthread_join(client_threads[i], NULL) != 0) {
+      fprintf(stderr, "Failed to join request thread %zu\n", i);
+      pthread_mutex_destroy(&thread_data.directory_mutex);
+      free(threads);
+      free(client_threads);
+      return;
+    }
+  }
+
+  // TODO join register thread
+  if (pthread_join(register_thread, NULL) != 0) {
+    fprintf(stderr, "Failed to join register thread\n");
+    pthread_mutex_destroy(&thread_data.directory_mutex);
+    free(threads);
+    free(client_threads);
+    return;
   }
 
   if (pthread_mutex_destroy(&thread_data.directory_mutex) != 0) {
@@ -271,6 +312,7 @@ static void dispatch_threads(DIR *dir) {
   }
 
   free(threads);
+  free(client_threads);
 }
 
 int main(int argc, char **argv) {
@@ -316,7 +358,7 @@ int main(int argc, char **argv) {
     return 1;
   }
 
-  char *register_pipe_path = argv[4]; // TODO talvez criar uma função init_server
+  char *register_pipe_path = argv[4];
   if (create_pipe(register_pipe_path, PIPE_PERMISSIONS) == -1) {
     return 1;
   }
@@ -327,7 +369,7 @@ int main(int argc, char **argv) {
     return 0;
   }
 
-  dispatch_threads(dir);
+  dispatch_threads(dir, register_pipe_path);
 
   if (closedir(dir) == -1) {
     fprintf(stderr, "Failed to close directory\n");

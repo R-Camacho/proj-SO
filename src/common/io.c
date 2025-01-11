@@ -79,7 +79,6 @@ int unlink_pipe(const char *path) {
 
 int create_pipe(const char *path, mode_t mode) {
   // Remove pipe if exists
-  // TODO pode nao ser preciso
   if (unlink_pipe(path) != 0) {
     return -1;
   }

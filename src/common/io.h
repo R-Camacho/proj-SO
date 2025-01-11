@@ -39,10 +39,6 @@ int read_string(int fd, char *str);
 /// @return On success, returns 1, on error, returns -1
 int write_all(int fd, const void *buffer, size_t size);
 
-/// Converts a delay in milliseconds to a timespec struct.
-/// @param delay_ms Delay in milliseconds.
-/// @return Timespec struct representing the delay.
-static struct timespec delay_to_timespec(unsigned int delay_ms);
 
 /// Sleeps for a given amount of time in milliseconds.
 /// @param time_ms Time to sleep in milliseconds.

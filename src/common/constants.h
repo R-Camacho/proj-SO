@@ -2,14 +2,13 @@
 #define COMMON_CONSTANTS_H
 
 // constantes partilhadas entre cliente e servidor
-#define MAX_SESSION_COUNT 1     // num max de sessoes no server, 1 default, necessario alterar mais tarde
+#define MAX_SESSION_COUNT 8     // num max de sessoes no server, 1 default, necessario alterar mais tarde
 #define STATE_ACCESS_DELAY_US   // delay a aplicar no server
 #define MAX_PIPE_PATH_LENGTH 40 // tamanho max do caminho do pipe
+#define MAX_REGISTER_LENGTH (1 + 3 * MAX_PIPE_PATH_LENGTH) // tamanho max da mensagem de registo
 #define MAX_STRING_SIZE 40
 
-#ifndef MAX_WRITE_SIZE
 #define MAX_WRITE_SIZE 256
-#endif
 
 #define MAX_NUMBER_SUB 10
 
