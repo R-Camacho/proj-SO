@@ -9,6 +9,7 @@
 #include <time.h>
 #include <unistd.h>
 
+#include "clients.h"
 #include "constants.h"
 #include "io.h"
 #include "kvs.h"

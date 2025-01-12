@@ -1,7 +1,9 @@
 #include "operations.h"
 
 
-static struct HashTable *kvs_table = NULL;
+HashTable *kvs_table = NULL;
+
+SubscriptionTable *subscription_table = NULL;
 
 /// Calculates a timespec from a delay in milliseconds.
 /// @param delay_ms Delay in milliseconds.
@@ -17,7 +19,10 @@ int kvs_init() {
   }
 
   kvs_table = create_hash_table();
-  return kvs_table == NULL;
+  if (kvs_table == NULL) return 1;
+
+  subscription_table = create_subscription_table();
+  return subscription_table == NULL;
 }
 
 int kvs_terminate() {
@@ -25,9 +30,15 @@ int kvs_terminate() {
     fprintf(stderr, "KVS state must be initialized\n");
     return 1;
   }
+  if (subscription_table == NULL) {
+    fprintf(stderr, "Subscription table must be initialized\n");
+    return 1;
+  }
 
   free_table(kvs_table);
   kvs_table = NULL;
+  free_subscription_table(subscription_table);
+  subscription_table = NULL;
   return 0;
 }
 
@@ -42,6 +53,10 @@ int kvs_write(size_t num_pairs, char keys[][MAX_STRING_SIZE], char values[][MAX_
   for (size_t i = 0; i < num_pairs; i++) {
     if (write_pair(kvs_table, keys[i], values[i]) != 0) {
       fprintf(stderr, "Failed to write key pair (%s,%s)\n", keys[i], values[i]);
+      continue;
+    }
+    if (notify_clients(subscription_table, keys[i], values[i]) == -1) {
+      fprintf(stderr, "Failed to notify clients of key pair (%s,%s)\n", keys[i], values[i]);
     }
   }
 
@@ -93,6 +108,9 @@ int kvs_delete(size_t num_pairs, char keys[][MAX_STRING_SIZE], int fd) {
       char str[MAX_STRING_SIZE];
       snprintf(str, MAX_STRING_SIZE, "(%s,KVSMISSING)", keys[i]);
       write_str(fd, str);
+    }
+    if (notify_clients(subscription_table, keys[i], "DELETED") == -1) {
+      fprintf(stderr, "Failed to notify clients of key pair (%s,%s)\n", keys[i], "NULL");
     }
   }
   if (aux) {

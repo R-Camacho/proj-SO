@@ -51,8 +51,10 @@ int kvs_connect(char const *req_pipe_path, char const *resp_pipe_path, char cons
 
 int kvs_disconnect(void) {
   // TODO close pipes and unlink pipe files
-  char msg = OP_CODE_DISCONNECT;
-  if (write_all(req_pipe_fd, &msg, 1) == -1) return 1;
+  char msg[1 + MAX_STRING_SIZE + 1] = { 0 }; // to facilitate reading pipe
+
+  msg[0] = OP_CODE_DISCONNECT;
+  if (write_all(req_pipe_fd, msg, 1 + MAX_STRING_SIZE + 1) == -1) return 1;
 
   if (close_file(req_pipe_fd) == -1) return 1;
   if (close_file(notif_pipe_fd) == -1) return 1;

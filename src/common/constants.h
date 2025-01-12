@@ -6,6 +6,8 @@
 #define STATE_ACCESS_DELAY_US   // delay a aplicar no server
 #define MAX_PIPE_PATH_LENGTH 40 // tamanho max do caminho do pipe
 #define MAX_REGISTER_LENGTH (1 + 3 * MAX_PIPE_PATH_LENGTH) // tamanho max da mensagem de registo
+#define MAX_NOTIFICATION_SIZE \
+  (1 + MAX_STRING_SIZE + 1 + 1 + MAX_STRING_SIZE + 1 + 1 + 1) // tamanho max da mensagem de notificacao
 #define MAX_STRING_SIZE 40
 
 #define MAX_WRITE_SIZE 256

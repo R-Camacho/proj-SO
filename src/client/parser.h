@@ -9,8 +9,6 @@
 
 #include "src/common/constants.h"
 
-#define NOTIFICATION_SIZE (1 + MAX_STRING_SIZE + 1 + 1 + MAX_WRITE_SIZE + 1 + 1 + 1)
-
 enum Command {
   CMD_DISCONNECT,
   CMD_SUBSCRIBE,

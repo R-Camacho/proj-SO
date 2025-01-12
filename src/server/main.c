@@ -163,7 +163,6 @@ static int run_job(int in_fd, int out_fd, char *filename) {
       break;
 
     case EOC:
-      printf("EOF\n"); // TODO tirar
       return 0;
     }
   }
@@ -298,7 +297,6 @@ static void dispatch_threads(DIR *dir, char *register_pipe_path) {
     }
   }
 
-  // TODO join register thread
   if (pthread_join(register_thread, NULL) != 0) {
     fprintf(stderr, "Failed to join register thread\n");
     pthread_mutex_destroy(&thread_data.directory_mutex);
@@ -369,6 +367,8 @@ int main(int argc, char **argv) {
     return 0;
   }
 
+  init_client_list();
+
   dispatch_threads(dir, register_pipe_path);
 
   if (closedir(dir) == -1) {
@@ -380,6 +380,10 @@ int main(int argc, char **argv) {
     wait(NULL);
     active_backups--;
   }
+
+  // TODO fechar os pipes nos signals
+
+  destroy_client_list();
 
   kvs_terminate();
 

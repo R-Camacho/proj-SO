@@ -15,7 +15,7 @@ void *notifications_thread(void *arg) {
   int notif_pipe_fd = *(int *)arg;
   int intr          = 0;
   // (<chave>,<valor>)
-  char buffer[NOTIFICATION_SIZE] = { 0 };
+  char buffer[MAX_NOTIFICATION_SIZE] = { 0 };
 
   while (1) {
     // clear buffer
