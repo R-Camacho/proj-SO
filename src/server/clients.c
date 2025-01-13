@@ -136,9 +136,10 @@ int notify_clients(SubscriptionTable *ht, char *key, char *value) {
       strncpy(notification + 1 + key_length + 1, value, value_length);
       strncpy(notification + 1 + key_length + 1 + value_length, ")", 2);
 
+
       for (size_t i = 0; i < MAX_SESSION_COUNT; i++) {
         if (keyNode->notif_pipe_fds[i] != -1) {
-          if (write_all(keyNode->notif_pipe_fds[i], notification, strlen(notification)) == -1) return -1;
+          if (write_all(keyNode->notif_pipe_fds[i], notification, MAX_NOTIFICATION_SIZE) == -1) return -1;
         }
       }
       return 0;
@@ -213,6 +214,10 @@ void *read_register(void *arg) {
 
     size_t len = strlen(buffer);
     if (len == 0) continue; // this may never happen
+    if (buffer[0] != OP_CODE_CONNECT) {
+      write_str(STDERR_FILENO, "Invalid request\n");
+      continue;
+    }
 
     sem_wait(&client_list->session_slots); // wait for a slot to be available
 
@@ -293,9 +298,7 @@ void insert_client(Client *client) {
 void remove_client(Client *client) {
   pthread_mutex_lock(&client_list->list_lock);
   for (size_t i = 0; i < MAX_SESSION_COUNT; i++) {
-    if (client_list->clients[i] == client) {             // client found
-      printf("Client found: %d\n", client->req_pipe_fd); // TODO tirar
-
+    if (client_list->clients[i] == client) { // client found
 
       // unsubscribe client from all keys
       ClientNode *keyNode = client_list->clients[i]->keys;

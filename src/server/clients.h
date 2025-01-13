@@ -24,7 +24,7 @@ typedef struct Client {
   int thread_active;
   int num_keys;
   ClientNode *keys;
-  pthread_mutex_t client_lock;
+  pthread_mutex_t client_lock; // TODO tirar
 } Client;
 
 typedef struct ClientList {
@@ -82,7 +82,7 @@ int unsubscribe_key(SubscriptionTable *ht, Client *client, char *key);
 // @param ht Subscription table
 // @param key Key to notify clients
 // @param value Value to notify clients
-// @return 0 if successful, 1 if no client is subscribed to the key
+// @return 0 if successful, 1 if no client is subscribed to the key, -1 on error
 int notify_clients(SubscriptionTable *ht, char *key, char *value);
 
 // Initializes the client list
