@@ -88,7 +88,7 @@ int create_pipe(const char *path, mode_t mode) {
     return -1;
   }
 
-  fprintf(stdout, "[INFO]: Pipe %s created\n", path); // TODO tirar isto
+  fprintf(stdout, "[INFO]: Pipe %s created\n", path);
   return 0;
 }
 
@@ -98,7 +98,7 @@ int open_file(const char *path, int flags) {
     fprintf(stderr, "Failed to open %s: %s\n", path, strerror(errno));
     return -1;
   }
-  printf("[INFO]: File %s opened\n", path); // TODO tirar isto
+  printf("[INFO]: File %s opened\n", path);
   return fd;
 }
 

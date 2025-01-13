@@ -3,6 +3,8 @@
 extern struct HashTable *kvs_table;
 extern struct SubscriptionTable *subscription_table;
 
+extern volatile sig_atomic_t sigusr1;
+
 ClientList *client_list = NULL;
 
 
@@ -49,9 +51,23 @@ int subscribe_key(SubscriptionTable *ht, Client *client, char *key) {
   if (client->num_keys >= MAX_SESSION_COUNT) {
     return 1; // client already subscribed to the maximum number of keys
   }
-
+  // Add key to the end of client key list
   pthread_mutex_lock(&client->client_lock);
+  ClientNode *newNode = (ClientNode *)malloc(sizeof(ClientNode));
+  newNode->key        = strdup(key);
+  newNode->next       = NULL;
+  if (client->keys == NULL) {
+    client->keys = newNode;
+  } else {
+    ClientNode *current = client->keys;
+    while (current->next != NULL) {
+      current = current->next;
+    }
+    current->next = newNode;
+  }
+  pthread_mutex_unlock(&client->client_lock);
 
+  pthread_mutex_lock(&ht->tablelock);
   SubscriptionNode *keyNode = ht->table[index];
   SubscriptionNode *previousNode;
   while (keyNode != NULL) {
@@ -65,7 +81,7 @@ int subscribe_key(SubscriptionTable *ht, Client *client, char *key) {
         }
       }
       client->num_keys++;
-      pthread_mutex_unlock(&client->client_lock);
+      pthread_mutex_unlock(&ht->tablelock);
       return 0;
     }
     previousNode = keyNode;
@@ -84,14 +100,34 @@ int subscribe_key(SubscriptionTable *ht, Client *client, char *key) {
   ht->table[index]           = keyNode;
   client->num_keys++;
 
-  pthread_mutex_unlock(&client->client_lock);
+  pthread_mutex_unlock(&ht->tablelock);
   return 0;
 }
 // returns 0 if key was successfully unsubscribed, 1 if key was not found
 int unsubscribe_key(SubscriptionTable *ht, Client *client, char *key) {
   int index = hash_key(key);
-  pthread_mutex_lock(&client->client_lock);
 
+  // Remove from client key list
+  pthread_mutex_lock(&client->client_lock);
+  ClientNode *current = client->keys;
+  ClientNode *prev    = NULL;
+
+  while (current != NULL) {
+    if (strcmp(current->key, key) == 0) {
+      if (prev == NULL) {
+        client->keys = current->next;
+      } else {
+        prev->next = current->next;
+      }
+      client->num_keys--;
+      break;
+    }
+    prev    = current;
+    current = current->next;
+  }
+  pthread_mutex_unlock(&client->client_lock);
+
+  pthread_mutex_lock(&ht->tablelock);
   SubscriptionNode *keyNode = ht->table[index];
   while (keyNode != NULL) {
     if (strcmp(keyNode->key, key) == 0) { // key found
@@ -106,7 +142,7 @@ int unsubscribe_key(SubscriptionTable *ht, Client *client, char *key) {
           break;
         }
       }
-      pthread_mutex_unlock(&client->client_lock);
+      pthread_mutex_unlock(&ht->tablelock);
       if (found)
         return 0; // key successfully unsubscribed
       else
@@ -115,7 +151,7 @@ int unsubscribe_key(SubscriptionTable *ht, Client *client, char *key) {
     keyNode = keyNode->next; // Move to the next node
   }
 
-  pthread_mutex_unlock(&client->client_lock);
+  pthread_mutex_unlock(&ht->tablelock);
   return 1; // key not found
 }
 
@@ -151,6 +187,9 @@ int notify_clients(SubscriptionTable *ht, char *key, char *value) {
 
 void init_client_list() {
   client_list = (ClientList *)malloc(sizeof(ClientList));
+  for (size_t i = 0; i < MAX_SESSION_COUNT; i++) {
+    client_list->clients[i] = NULL;
+  }
   pthread_mutex_init(&client_list->list_lock, NULL);
   sem_init(&client_list->sem, 0, 0);
   sem_init(&client_list->session_slots, 0, MAX_SESSION_COUNT);
@@ -180,6 +219,14 @@ void free_client(Client *client) {
 void *read_register(void *arg) {
   char *register_pipe_path = (char *)arg;
 
+  // Unblock SIGUSR1 only in this thread
+  sigset_t set;
+  sigemptyset(&set);
+  sigaddset(&set, SIGUSR1);
+  if (pthread_sigmask(SIG_UNBLOCK, &set, NULL) != 0) {
+    fprintf(stderr, "Failed to unblock SIGUSR1\n");
+  }
+
   int register_pipe_fd;
   if ((register_pipe_fd = open_file(register_pipe_path, O_RDONLY)) == -1) {
     write_all(STDERR_FILENO, "Failed to open register pipe\n", 29);
@@ -189,6 +236,14 @@ void *read_register(void *arg) {
   int intr = 0;
 
   while (1) {
+
+    // Check if SIGUSR1 was received
+    if (sigusr1) {
+      handle_sigusr1_signal();
+      sigusr1 = 0;
+      continue;
+    }
+
     // clear buffer
     memset(buffer, 0, sizeof(buffer));
 
@@ -233,9 +288,6 @@ void *read_register(void *arg) {
 
   return NULL;
 }
-
-// TODO VERIFICAR MAX KEYS CLIENT
-
 
 void respond_to_client(Client *client, char *response) {
   int resp_pipe_fd = client->resp_pipe_fd;
@@ -296,12 +348,12 @@ void insert_client(Client *client) {
 }
 
 void remove_client(Client *client) {
-  pthread_mutex_lock(&client_list->list_lock);
+
   for (size_t i = 0; i < MAX_SESSION_COUNT; i++) {
     if (client_list->clients[i] == client) { // client found
 
       // unsubscribe client from all keys
-      ClientNode *keyNode = client_list->clients[i]->keys;
+      ClientNode *keyNode = client->keys;
       while (keyNode != NULL) {
         unsubscribe_key(subscription_table, client, keyNode->key);
         keyNode = keyNode->next;
@@ -327,15 +379,23 @@ void remove_client(Client *client) {
     }
   }
   sem_post(&client_list->session_slots);
-  pthread_mutex_unlock(&client_list->list_lock);
 }
 
 void *client_thread(void *arg) {
   (void)arg; // unused
+
+  // Ignore SIGUSR1
+  sigset_t set;
+  sigemptyset(&set);
+  sigaddset(&set, SIGUSR1);
+  if (pthread_sigmask(SIG_BLOCK, &set, NULL) != 0) {
+    fprintf(stderr, "Failed to mask SIGUSR1\n");
+  }
+
   while (1) {
     sem_wait(&client_list->sem); // wait for a client to connect
-    pthread_mutex_lock(&client_list->list_lock);
 
+    pthread_mutex_lock(&client_list->list_lock);
     // find first free client
     Client *client = NULL;
     for (size_t i = 0; i < MAX_SESSION_COUNT; i++) {
@@ -350,10 +410,13 @@ void *client_thread(void *arg) {
     if (!client) continue;
 
     // Process client requests
-    char buffer[1 + MAX_STRING_SIZE + 1];
-    int intr = 0;
+    char buffer[1 + MAX_STRING_SIZE + 1] = { 0 };
+    int intr                             = 0;
 
     while (1) {
+      // clear buffer
+      memset(buffer, 0, sizeof(buffer));
+
       ssize_t bytes_read = read_all(client->req_pipe_fd, buffer, sizeof(buffer), &intr);
       if (bytes_read == -1) {
         if (errno == EAGAIN || errno == EWOULDBLOCK) {
@@ -366,11 +429,11 @@ void *client_thread(void *arg) {
         }
         // Other error occurred
         fprintf(stderr, "Failed to read from notification pipe: %s\n", strerror(errno));
-        continue;
+        break;
       }
 
       if (bytes_read == 0) {
-        continue; // TODO ver se é isto
+        continue;
       }
 
       char response[2] = { 0 };
@@ -396,7 +459,9 @@ void *client_thread(void *arg) {
         response[0] = OP_CODE_DISCONNECT;
         response[1] = '0';
         respond_to_client(client, response);
+        pthread_mutex_lock(&client_list->list_lock);
         remove_client(client);
+        pthread_mutex_unlock(&client_list->list_lock);
         break;
       }
 
@@ -407,4 +472,16 @@ void *client_thread(void *arg) {
   }
 
   return NULL;
+}
+
+
+void handle_sigusr1_signal() {
+  pthread_mutex_lock(&client_list->list_lock);
+  for (size_t i = 0; i < MAX_SESSION_COUNT; i++) {
+    if (client_list->clients[i] != NULL) {
+      printf("removing client\n");
+      remove_client(client_list->clients[i]);
+    }
+  }
+  pthread_mutex_unlock(&client_list->list_lock);
 }

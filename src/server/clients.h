@@ -2,6 +2,7 @@
 #define CLIENTS_H
 
 #include <semaphore.h>
+#include <signal.h>
 
 #include "constants.h"
 #include "kvs.h"
@@ -24,7 +25,7 @@ typedef struct Client {
   int thread_active;
   int num_keys;
   ClientNode *keys;
-  pthread_mutex_t client_lock; // TODO tirar
+  pthread_mutex_t client_lock;
 } Client;
 
 typedef struct ClientList {
@@ -45,11 +46,6 @@ typedef struct SubscriptionTable {
   pthread_mutex_t tablelock;
 } SubscriptionTable;
 
-
-// TODO add comments
-
-
-// coemments
 
 // Simple hash function for strings
 // @param key String to hash
@@ -118,5 +114,9 @@ void free_client(Client *client);
 
 // Client thread function
 void *client_thread(void *arg);
+
+// Handler for SIGUSR1 signal
+// only for host thread
+void handle_sigusr1_signal();
 
 #endif // CLIENTS_H

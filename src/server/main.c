@@ -2,6 +2,7 @@
 #include <errno.h>
 #include <fcntl.h>
 #include <limits.h>
+#include <signal.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -32,6 +33,14 @@ size_t active_backups = 0; // Number of active backups
 size_t max_backups;        // Maximum allowed simultaneous backups
 size_t max_threads;        // Maximum allowed simultaneous threads
 char *jobs_directory = NULL;
+
+volatile sig_atomic_t sigusr1 = 0;
+
+void sigusr1_handler(int signo) {
+  if (signo == SIGUSR1) {
+    sigusr1 = 1;
+  }
+}
 
 int filter_job_files(const struct dirent *entry) {
   const char *dot = strrchr(entry->d_name, '.');
@@ -170,6 +179,13 @@ static int run_job(int in_fd, int out_fd, char *filename) {
 
 // frees arguments
 static void *get_file(void *arguments) {
+
+  // Block SIGUSR1
+  sigset_t set;
+  sigemptyset(&set);
+  sigaddset(&set, SIGUSR1);
+  pthread_sigmask(SIG_BLOCK, &set, NULL);
+
   struct SharedData *thread_data = (struct SharedData *)arguments;
   DIR *dir                       = thread_data->dir;
   char *dir_name                 = thread_data->dir_name;
@@ -267,7 +283,6 @@ static void dispatch_threads(DIR *dir, char *register_pipe_path) {
     }
   }
 
-  // TODO ler do FIFO de registo
   pthread_t register_thread;
   if (pthread_create(&register_thread, NULL, read_register, register_pipe_path) != 0) {
     fprintf(stderr, "Failed to create register thread\n");
@@ -323,6 +338,14 @@ int main(int argc, char **argv) {
     write_str(STDERR_FILENO, " <register_pipe_path>\n");
     return 1;
   }
+
+  signal(SIGUSR1, sigusr1_handler);
+
+  // Block SIGUSR1 in main thread
+  sigset_t set;
+  sigemptyset(&set);
+  sigaddset(&set, SIGUSR1);
+  pthread_sigmask(SIG_BLOCK, &set, NULL);
 
   jobs_directory = argv[1];
 
@@ -380,8 +403,6 @@ int main(int argc, char **argv) {
     wait(NULL);
     active_backups--;
   }
-
-  // TODO fechar os pipes nos signals
 
   destroy_client_list();
 
