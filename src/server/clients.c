@@ -479,7 +479,6 @@ void handle_sigusr1_signal() {
   pthread_mutex_lock(&client_list->list_lock);
   for (size_t i = 0; i < MAX_SESSION_COUNT; i++) {
     if (client_list->clients[i] != NULL) {
-      printf("removing client\n");
       remove_client(client_list->clients[i]);
     }
   }
