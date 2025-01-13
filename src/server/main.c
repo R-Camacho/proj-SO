@@ -38,6 +38,7 @@ volatile sig_atomic_t sigusr1 = 0;
 
 void sigusr1_handler(int signo) {
   if (signo == SIGUSR1) {
+    write_str(STDOUT_FILENO, "Received SIGUSR1\n");
     sigusr1 = 1;
   }
 }

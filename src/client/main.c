@@ -24,21 +24,18 @@ void *notifications_thread(void *arg) {
     // read notification
     ssize_t bytes_read = read_all(notif_pipe_fd, buffer, sizeof(buffer), &intr);
     if (bytes_read == -1) {
-      if (errno == EAGAIN || errno == EWOULDBLOCK) {
-        // No data to read
-        continue;
-      }
       if (intr) {
         fprintf(stderr, "Read interrupted\n");
+        return NULL;
         break;
       }
       // Other error occurred
-      fprintf(stderr, "Failed to read from notification pipe: %s\n", strerror(errno));
       continue;
     }
 
     if (bytes_read == 0) {
-      continue;
+      write_all(STDOUT_FILENO, "Server disconnected this client\n", 33);
+      _exit(0);
     }
 
     size_t len = strlen(buffer);
@@ -70,14 +67,12 @@ int main(int argc, char *argv[]) {
   strncat(resp_pipe_path, argv[1], strlen(argv[1]) * sizeof(char));
   strncat(notif_pipe_path, argv[1], strlen(argv[1]) * sizeof(char));
 
-  // TODO open pipes;
   int notif_pipe_fd;
   if (kvs_connect(req_pipe_path, resp_pipe_path, argv[2], notif_pipe_path, &notif_pipe_fd) != 0) {
     fprintf(stderr, "Failed to connect to the server\n");
     return 1;
   }
 
-  // TODO: start notifications thread
   pthread_t notif_thread;
   if (pthread_create(&notif_thread, NULL, notifications_thread, &notif_pipe_fd) != 0) {
     fprintf(stderr, "Failed to create notifications thread\n");
@@ -87,13 +82,12 @@ int main(int argc, char *argv[]) {
   while (1) {
     switch (get_next(STDIN_FILENO)) {
     case CMD_DISCONNECT:
-      // TODO: end notifications thread
-      pthread_cancel(notif_thread); // read_all is the cancellation point
-      pthread_join(notif_thread, NULL);
+      // pthread_cancel(notif_thread); // read_all is the cancellation point
       if (kvs_disconnect() != 0) {
         fprintf(stderr, "Failed to disconnect to the server\n");
         return 1;
       }
+      pthread_join(notif_thread, NULL);
       printf("Disconnected from server\n");
       return 0;
 

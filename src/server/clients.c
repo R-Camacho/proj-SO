@@ -258,17 +258,16 @@ void *read_register(void *arg) {
 
     // read notification
     ssize_t bytes_read = read_all(register_pipe_fd, buffer, sizeof(buffer), &intr);
+    if (intr) {
+      fprintf(stderr, "Read interrupted\n");
+      continue;
+    }
     if (bytes_read == -1) {
-      if (errno == EAGAIN || errno == EWOULDBLOCK) {
-        // No data to read
-        continue;
-      }
+      // Other error occurred
       if (intr) {
         fprintf(stderr, "Read interrupted\n");
-        break;
+        continue;
       }
-      // Other error occurred
-      fprintf(stderr, "Failed to read from notification pipe: %s\n", strerror(errno));
       continue;
     }
 
@@ -427,17 +426,16 @@ void *client_thread(void *arg) {
       memset(buffer, 0, sizeof(buffer));
 
       ssize_t bytes_read = read_all(client->req_pipe_fd, buffer, sizeof(buffer), &intr);
+      if (intr) {
+        fprintf(stderr, "Read interrupted\n");
+        break;
+      }
       if (bytes_read == -1) {
-        if (errno == EAGAIN || errno == EWOULDBLOCK) {
-          // No data to read
-          continue;
-        }
+        // Other error occurred
         if (intr) {
           fprintf(stderr, "Read interrupted\n");
           break;
         }
-        // Other error occurred
-        fprintf(stderr, "Failed to read from notification pipe: %s\n", strerror(errno));
         break;
       }
 
