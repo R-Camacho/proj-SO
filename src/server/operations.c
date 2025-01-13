@@ -112,6 +112,7 @@ int kvs_delete(size_t num_pairs, char keys[][MAX_STRING_SIZE], int fd) {
     if (notify_clients(subscription_table, keys[i], "DELETED") == -1) {
       fprintf(stderr, "Failed to notify clients of key pair (%s,%s)\n", keys[i], "NULL");
     }
+    unsubscribe_all_clients(subscription_table, keys[i]);
   }
   if (aux) {
     write_str(fd, "]\n");

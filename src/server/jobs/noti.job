@@ -9,4 +9,7 @@ WAIT 5000
 WRITE [(a,acca)]
 WAIT 5000
 DELETE [a]
+WAIT 5000
+WRITE [(a,azza)]
+WAIT 5000
 SHOW

@@ -103,6 +103,15 @@ int subscribe_key(SubscriptionTable *ht, Client *client, char *key) {
   pthread_mutex_unlock(&ht->tablelock);
   return 0;
 }
+
+void unsubscribe_all_clients(SubscriptionTable *ht, char *key) {
+  for (size_t i = 0; i < MAX_SESSION_COUNT; i++) {
+    if (client_list->clients[i] != NULL) {
+      unsubscribe_key(ht, client_list->clients[i], key);
+    }
+  }
+}
+
 // returns 0 if key was successfully unsubscribed, 1 if key was not found
 int unsubscribe_key(SubscriptionTable *ht, Client *client, char *key) {
   int index = hash_key(key);
@@ -229,7 +238,7 @@ void *read_register(void *arg) {
 
   int register_pipe_fd;
   if ((register_pipe_fd = open_file(register_pipe_path, O_RDONLY)) == -1) {
-    write_all(STDERR_FILENO, "Failed to open register pipe\n", 29);
+    write_str(STDERR_FILENO, "Failed to open register pipe\n");
     return NULL;
   }
   char buffer[MAX_REGISTER_LENGTH];

@@ -2,8 +2,8 @@ WRITE [(a,anna)(b,bernardo)]
 WRITE [(d,dinis)(c,carlota)]
 READ [x,z,l,v]
 SHOW
-#BACKUP
+BACKUP
 DELETE [c]
 READ [c]
-WAIT 1000000
+WAIT 1000
 SHOW

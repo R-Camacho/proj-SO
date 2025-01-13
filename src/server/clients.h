@@ -74,6 +74,11 @@ int subscribe_key(SubscriptionTable *ht, Client *client, char *key);
 // @return 0 if successful, 1 if key does not exist
 int unsubscribe_key(SubscriptionTable *ht, Client *client, char *key);
 
+// Unsubscribes all clients from a key
+// @param ht Subscription table
+// @param key Key to unsubscribe clients from
+void unsubscribe_all_clients(SubscriptionTable *ht, char *key);
+
 // Notifies all clients subscribed to a key
 // @param ht Subscription table
 // @param key Key to notify clients

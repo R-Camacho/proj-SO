@@ -1,7 +1,7 @@
 WRITE [(e,edmundo)(f,felix)]
 WRITE [(g,gabriela)(h,helio)]
-#BACKUP
+BACKUP
 DELETE [g]
 WRITE [(i,ignacio)(j,joana)]
 WRITE [(k,katia)(l,leonel)]
-#BACKUP
+BACKUP
